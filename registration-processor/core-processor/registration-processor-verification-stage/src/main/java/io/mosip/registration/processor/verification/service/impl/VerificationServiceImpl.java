@@ -84,6 +84,14 @@ import java.util.stream.Collectors;
 
 import static io.mosip.registration.processor.verification.constants.VerificationConstants.DATETIME_PATTERN;
 
+import io.mosip.registration.processor.core.packet.dto.demographicinfo.IndividualDemographicDedupe;
+import io.mosip.registration.processor.packet.manager.decryptor.Decryptor;
+import io.mosip.registration.processor.status.dto.RegistrationAdditionalInfoDTO;
+import io.mosip.registration.processor.status.dto.SyncRegistrationDto;
+import io.mosip.registration.processor.status.dto.SyncResponseDto;
+import io.mosip.registration.processor.status.entity.SyncRegistrationEntity;
+import io.mosip.registration.processor.status.service.SyncRegistrationService;
+import io.mosip.registration.processor.verification.util.NotificationUtilityNew;
 /**
  * The Class ManualAdjudicationServiceImpl.
  */
@@ -135,6 +143,9 @@ public class VerificationServiceImpl implements VerificationService {
 	@Value("${mosip.regproc.data.share.internal.domain.name}")
 	private String internalDomainName;
 
+	@Value("${mosip.notificationtype}")
+	private String notificationTypes;
+	
 	@Autowired
 	private RegistrationProcessorRestClientService registrationProcessorRestClientService;
 
@@ -180,6 +191,18 @@ public class VerificationServiceImpl implements VerificationService {
 	/** The Constant PROTOCOL. */
 	public static final String PROTOCOL = "https";
 
+	/**
+	 * The sync registration service.
+	 */
+	@Autowired
+	private SyncRegistrationService<SyncResponseDto, SyncRegistrationDto> syncRegistrationService;
+
+	@Autowired
+	private NotificationUtilityNew notificationUtility;
+	
+	@Autowired
+	private Decryptor decryptor;
+	
 	/*
 	 * This method will be called from the event bus passing messageDTO object
 	 * containing rid Based o Rid fetch match reference Id and form request which is
@@ -231,6 +254,10 @@ public class VerificationServiceImpl implements VerificationService {
 						.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.ERROR.toString());
 			}
 			registrationStatusDto.setRegistrationStageName(stageName);
+			
+			//SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+			//sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
+	
 
 		} catch (DataShareException de) {
 			messageDTO.setInternalError(true);
@@ -534,8 +561,11 @@ public class VerificationServiceImpl implements VerificationService {
 		List<String> pathSegments = new ArrayList<>();
 		pathSegments.add(policyId);
 		pathSegments.add(subscriberId);
-		String protocol = StringUtils.isNotEmpty(httpProtocol) ? PolicyConstant.HTTP_PROTOCOL
-				: PolicyConstant.HTTPS_PROTOCOL;
+		
+		 String protocol = StringUtils.isNotEmpty(httpProtocol) ?
+		 PolicyConstant.HTTP_PROTOCOL : PolicyConstant.HTTPS_PROTOCOL;
+		 
+		//String protocol = httpProtocol;
 		String url = null;
 
 		if (policy.get(PolicyConstant.DATASHARE_POLICIES) != null) {
@@ -701,6 +731,9 @@ public class VerificationServiceImpl implements VerificationService {
 
 			description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
 			description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
+			
+			SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+			sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
 
 		} else if (statusCode.equalsIgnoreCase(ManualVerificationStatus.REJECTED.name())) {
 			registrationStatusDto.setStatusCode(RegistrationStatusCode.REJECTED.toString());
@@ -826,4 +859,32 @@ public class VerificationServiceImpl implements VerificationService {
 		return isTransactionSuccessful;
 	}
 
+	private void sendNotification(SyncRegistrationEntity regEntity,
+			  InternalRegistrationStatusDto registrationStatusDto, boolean isTransactionSuccessful) {
+			try {
+			String registrationId = registrationStatusDto.getRegistrationId();
+			
+			IndividualDemographicDedupe demographicData = packetInfoManager.
+					getIdentityKeysAndFetchValuesFromJSON(registrationId, registrationStatusDto.getRegistrationType(), ProviderStageName.VERIFICATION);
+			
+			if (demographicData.getEmail() != null) {
+			String[] allNotificationTypes = notificationTypes.split("\\|");
+			boolean isProcessingSuccess;
+			
+			if (isTransactionSuccessful) {
+			isProcessingSuccess = true;
+					notificationUtility.sendNotification(demographicData, registrationStatusDto,
+					regEntity, allNotificationTypes, isProcessingSuccess);
+			} else {
+			isProcessingSuccess = false;
+			notificationUtility.sendNotification(demographicData, registrationStatusDto,
+					regEntity, allNotificationTypes, isProcessingSuccess);
+			}			
+			}
+			} catch (Exception e) {
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
+			LoggerFileConstant.REGISTRATIONID.toString(),
+			"Send notification failed for rid - " + registrationStatusDto.getRegistrationId(), ExceptionUtils.getStackTrace(e));
+			}
+			}
 }
