@@ -4,10 +4,8 @@ import io.mosip.registration.processor.verification.exception.handler.ManualVeri
 import io.mosip.registration.processor.verification.service.impl.VerificationServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import io.mosip.registration.processor.verification.service.VerificationService;
 import io.mosip.registration.processor.verification.util.ManualVerificationRequestValidator;
-
 import io.mosip.registration.processor.core.util.LanguageUtility;
 import io.mosip.registration.processor.message.sender.template.TemplateGenerator;
 import io.mosip.registration.processor.verification.util.NotificationUtilityNew;
