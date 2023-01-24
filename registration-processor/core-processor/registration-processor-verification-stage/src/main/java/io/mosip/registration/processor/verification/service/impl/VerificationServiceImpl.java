@@ -255,8 +255,8 @@ public class VerificationServiceImpl implements VerificationService {
 			}
 			registrationStatusDto.setRegistrationStageName(stageName);
 			
-			SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
-			sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
+			//SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+			//sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
 	
 
 		} catch (DataShareException de) {
@@ -732,8 +732,8 @@ public class VerificationServiceImpl implements VerificationService {
 			description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
 			description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
 			
-			regProcLogger.info("RID : " + messageDTO.getRid() + " WorkflowInstanceId for verification.");
-			SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+			regProcLogger.info("WorkflowInstanceId : " + registrationStatusDto.getWorkflowInstanceId() + " WorkflowInstanceId for verification.");
+			SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(registrationStatusDto.getWorkflowInstanceId());
 			//regProcLogger.info("RID : " + regEntity.getRegistrationId() + " RID for verification.");
 			sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
 
