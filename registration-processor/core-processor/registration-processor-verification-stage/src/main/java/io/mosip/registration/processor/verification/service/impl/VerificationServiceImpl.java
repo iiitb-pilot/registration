@@ -732,7 +732,9 @@ public class VerificationServiceImpl implements VerificationService {
 			description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
 			description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
 			
+			regProcLogger.info("WorkflowInstanceId : " + messageDTO.getWorkflowInstanceId() + " WorkflowInstanceId for verification.");
 			SyncRegistrationEntity regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+			regProcLogger.info("RID : " + regEntity.getRegistrationId() + " RID for verification.");
 			sendNotification(regEntity, registrationStatusDto, isTransactionSuccessful);
 
 		} else if (statusCode.equalsIgnoreCase(ManualVerificationStatus.REJECTED.name())) {
