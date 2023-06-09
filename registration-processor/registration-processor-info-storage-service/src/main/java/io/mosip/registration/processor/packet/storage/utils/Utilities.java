@@ -14,6 +14,7 @@ import io.mosip.kernel.core.util.exception.JsonProcessingException;
 import io.mosip.registration.processor.core.constant.JsonConstant;
 import io.mosip.registration.processor.core.exception.PacketManagerException;
 import io.mosip.registration.processor.core.packet.dto.FieldValue;
+import io.mosip.registration.processor.core.packet.dto.demographicinfo.JsonValue;
 import io.mosip.registration.processor.packet.manager.idreposervice.IdRepoService;
 import io.mosip.registration.processor.packet.storage.dto.ConfigEnum;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
@@ -857,4 +858,36 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Filter through all identity values in different languages (if available)
+	 * @param demographicJsonIdentity
+	 * @param attribute
+	 * @return
+	 */
+	public List<String> getIdJsonByAttribute(JSONObject demographicJsonIdentity, String attribute) {
+
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				"", "Utilities::getIdJsonByAttribute()::entry");
+		List<String> identityValues = new ArrayList<>();
+
+		Object jsonObject = JsonUtil.getJSONValue(demographicJsonIdentity, attribute);
+		if (jsonObject instanceof ArrayList) {
+			JSONArray node = JsonUtil.getJSONArray(demographicJsonIdentity, attribute);
+			JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, node);
+			if (jsonValues != null)
+				for (int count = 0; count < jsonValues.length; count++) {
+					identityValues.add(jsonValues[count].getValue());
+				}
+		} else if (jsonObject instanceof LinkedHashMap) {
+			JSONObject json = JsonUtil.getJSONObject(demographicJsonIdentity, attribute);
+			if (json != null)
+				identityValues.add(json.get("value").toString());
+		} else {
+			if (jsonObject != null)
+				identityValues.add(jsonObject.toString());
+		}
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				"", "Utilities::getIdJsonByAttribute()::exit");
+		return identityValues;
+	}
 }
