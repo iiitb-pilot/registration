@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mosip.kernel.core.exception.ServiceError;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.DateUtils;
+import io.mosip.kernel.core.util.exception.JsonProcessingException;
 import io.mosip.registration.processor.core.abstractverticle.*;
 import io.mosip.registration.processor.core.code.*;
 import io.mosip.registration.processor.core.common.rest.dto.ErrorDTO;
@@ -12,6 +13,7 @@ import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
 import io.mosip.registration.processor.core.constant.VidType;
 import io.mosip.registration.processor.core.exception.ApisResourceAccessException;
+import io.mosip.registration.processor.core.exception.PacketManagerException;
 import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
 import io.mosip.registration.processor.core.exception.util.PlatformSuccessMessages;
 import io.mosip.registration.processor.core.http.RequestWrapper;
@@ -33,6 +35,7 @@ import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
 import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
 import io.mosip.registration.processor.status.service.RegistrationStatusService;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.json.JSONException;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,10 +54,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 /**
  * The Class PrintStage.
@@ -122,8 +122,8 @@ public class PrintingStage extends MosipVerticleAPIManager {
     private Long messageExpiryTimeLimit;
     @Value("${mosip.registration.processor.encrypt:false}")
     private boolean encrypt;
-    @Value("${mosip.regproc.thirdparty.print.enabled:false}")
-    private Boolean isThirdPartyPrintEnabled;
+    @Value("${mosip.registration.processor.print.share.credential:false}")
+    private Boolean isCredentialShareEnabled;
     /**
      * The core audit request builder.
      */
@@ -214,9 +214,10 @@ public class PrintingStage extends MosipVerticleAPIManager {
 
             } else {
                 String vid = getVid(uin);
-                responseWrapper = insertCredentialTransactionEntry(vid, regId, env.getProperty("mosip.registration.processor.issuer"));
-                if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
-                    ErrorDTO error = responseWrapper.getErrors().get(0);
+                //responseWrapper = createCredentialRequest(vid, regId, env.getProperty("mosip.registration.processor.issuer"));
+                List<ResponseWrapper<?>> responseWrapperList = createCredentialRequestForPartners(regId, registrationStatusDto.getRegistrationType(), jsonObject, vid);
+                if (!responseWrapperList.isEmpty() && responseWrapperList.get(0).getErrors() != null && !responseWrapperList.get(0).getErrors().isEmpty()) {
+                    ErrorDTO error = responseWrapperList.get(0).getErrors().get(0);
                     object.setIsValid(Boolean.FALSE);
                     isTransactionSuccessful = false;
                     description.setMessage(PlatformErrorMessages.RPR_PRT_PRINT_REQUEST_FAILED.getMessage());
@@ -230,7 +231,7 @@ public class PrintingStage extends MosipVerticleAPIManager {
                     registrationStatusDto
                             .setLatestTransactionTypeCode(RegistrationTransactionTypeCode.PRINT_SERVICE.toString());
                 } else {
-                    credentialResponseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()),
+                    credentialResponseDto = mapper.readValue(mapper.writeValueAsString(responseWrapperList.get(0).getResponse()),
                             CredentialResponseDto.class);
 
                     registrationStatusDto.setRefId(credentialResponseDto.getRequestId());
@@ -248,27 +249,6 @@ public class PrintingStage extends MosipVerticleAPIManager {
 
                     regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
                             LoggerFileConstant.REGISTRATIONID.toString(), regId, "PrintStage::process()::exit");
-                }
-
-                if (isThirdPartyPrintEnabled) {
-                    var metaInfo = utilities.getMetaInfo(regId, registrationStatusDto.getRegistrationType(), ProviderStageName.PRINTING);
-                    jsonObject.putAll(metaInfo);
-                    List<String> partners = printPartnerService.getPrintPartners(regId, jsonObject);
-                    if (!partners.isEmpty()) {
-                        for (String partnerId : partners) {
-                            responseWrapper = insertCredentialTransactionEntry(vid, regId, partnerId);
-                            if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
-                                ErrorDTO error = responseWrapper.getErrors().get(0);
-                                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
-                                        LoggerFileConstant.REGISTRATIONID.toString(), regId, "Partner Print Credential Request::Failed:: " + error.getErrorCode() + " - " + error.getMessage());
-                            } else {
-                                CredentialResponseDto credentialResDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()),
-                                        CredentialResponseDto.class);
-                                regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
-                                        LoggerFileConstant.REFERENCEID.toString(), credentialResDto.getRequestId(), "Partner Print Credential Request::process()::exit");
-                            }
-                        }
-                    }
                 }
             }
         } catch (ApisResourceAccessException e) {
@@ -345,7 +325,34 @@ public class PrintingStage extends MosipVerticleAPIManager {
         return object;
     }
 
-    private ResponseWrapper<?> insertCredentialTransactionEntry(String vid, String regId, String partnerId) throws ApisResourceAccessException {
+    private List<ResponseWrapper<?>> createCredentialRequestForPartners(String regId, String registrationType, JSONObject jsonObject, String vid) throws ApisResourceAccessException, IOException, PacketManagerException, JsonProcessingException, JSONException {
+
+        List<ResponseWrapper<?>> responseWrappers = new ArrayList<>();
+        if (isCredentialShareEnabled) {
+            var metaInfo = utilities.getMetaInfo(regId, registrationType, ProviderStageName.PRINTING);
+            jsonObject.putAll(metaInfo);
+            Set<String> partners = printPartnerService.getPrintPartners(regId, jsonObject);
+            if (!partners.isEmpty()) {
+                for (String partnerId : partners) {
+                    ResponseWrapper<?> responseWrapper = createCredentialRequest(vid, regId, partnerId);
+                    if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
+                        ErrorDTO error = responseWrapper.getErrors().get(0);
+                        regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
+                                LoggerFileConstant.REGISTRATIONID.toString(), regId, "Partner Print Credential Request::Failed:: " + error.getErrorCode() + " - " + error.getMessage());
+                    } else {
+                        CredentialResponseDto credentialResDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()),
+                                CredentialResponseDto.class);
+                        regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
+                                LoggerFileConstant.REFERENCEID.toString(), credentialResDto.getRequestId(), "Partner Print Credential Request::process()::exit");
+                    }
+                    responseWrappers.add(responseWrapper);
+                }
+            }
+        }
+        return responseWrappers;
+    }
+
+    private ResponseWrapper<?> createCredentialRequest(String vid, String regId, String partnerId) throws ApisResourceAccessException {
         RequestWrapper<CredentialRequestDto> requestWrapper = new RequestWrapper<>();
         ResponseWrapper<?> responseWrapper;
         CredentialRequestDto credentialRequestDto = getCredentialRequestDto(vid, partnerId);

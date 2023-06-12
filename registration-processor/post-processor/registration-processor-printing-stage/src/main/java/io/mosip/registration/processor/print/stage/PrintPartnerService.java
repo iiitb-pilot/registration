@@ -1,11 +1,19 @@
 package io.mosip.registration.processor.print.stage;
 
 import org.json.simple.JSONObject;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 
-import java.util.List;
+import java.util.Set;
 
-@ConditionalOnClass(name = "PrintPartnerServiceImpl")
+/**
+ * * This service helps to get configured print partners to whom the print credentials to be shared.
+ * *
+ */
 public interface PrintPartnerService {
-    List<String> getPrintPartners(String regId, JSONObject identity);
+    /**
+     * Gets list of print partners to send the credential print request.
+     * @param regId
+     * @param identity
+     * @return Set of print partner Ids.
+     */
+    Set<String> getPrintPartners(String regId, JSONObject identity);
 }
