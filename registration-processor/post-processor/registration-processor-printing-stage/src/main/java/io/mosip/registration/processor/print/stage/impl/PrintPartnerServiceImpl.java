@@ -24,7 +24,7 @@ import java.util.Set;
 public class PrintPartnerServiceImpl implements PrintPartnerService {
 
     private static final Logger regProcLogger = RegProcessorLogger.getLogger(PrintPartnerServiceImpl.class);
-    private static final String IDENTITY_ATTRIBUTE = "mosip.registration.processor.print.issuer.identification.attribute";
+    private static final String IDENTITY_ATTRIBUTE = "mosip.identification.attribute";
     private static final String NO_MATCH_ISSUER = "mosip.registration.processor.print.issuer.noMatch";
 
     @Autowired
@@ -52,10 +52,10 @@ public class PrintPartnerServiceImpl implements PrintPartnerService {
         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
                 regId, "PrintPartnerServiceImpl::getPrintPartners()::" + printPartnerExpression.toString());
 
-        var identityValues = utilities.getIdJsonByAttribute(identity, env.getProperty(IDENTITY_ATTRIBUTE));
+        String identityValue = utilities.getIdJsonByAttribute(identity, env.getProperty(IDENTITY_ATTRIBUTE));
 
         Map<String, Object> context = new HashMap<>();
-        context.put(env.getProperty(IDENTITY_ATTRIBUTE), identityValues);
+        context.put(env.getProperty(IDENTITY_ATTRIBUTE), identityValue);
         boolean printIssuerFound = false;
         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
                 regId, "PrintPartnerServiceImpl::PrintPartnerExpression::" + printPartnerExpression.toString());

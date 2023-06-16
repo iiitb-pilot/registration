@@ -859,35 +859,37 @@ public class Utilities {
 	}
 
 	/**
-	 * Filter through all identity values in different languages (if available)
+	 * Returns attribute value from identity data.
 	 * @param demographicJsonIdentity
 	 * @param attribute
 	 * @return
 	 */
-	public List<String> getIdJsonByAttribute(JSONObject demographicJsonIdentity, String attribute) {
+	public String getIdJsonByAttribute(JSONObject demographicJsonIdentity, String attribute) {
 
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				"", "Utilities::getIdJsonByAttribute()::entry");
-		List<String> identityValues = new ArrayList<>();
+		String identityValue = new String();
 
 		Object jsonObject = JsonUtil.getJSONValue(demographicJsonIdentity, attribute);
 		if (jsonObject instanceof ArrayList) {
+			String langCode = JsonUtil.getJSONValue(demographicJsonIdentity, MappingJsonConstants.LANG_CODE);
 			JSONArray node = JsonUtil.getJSONArray(demographicJsonIdentity, attribute);
 			JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, node);
 			if (jsonValues != null)
 				for (int count = 0; count < jsonValues.length; count++) {
-					identityValues.add(jsonValues[count].getValue());
+					if(!langCode.isEmpty() && jsonValues[count].getLanguage().equals(langCode))
+						identityValue = jsonValues[count].getValue();
 				}
 		} else if (jsonObject instanceof LinkedHashMap) {
 			JSONObject json = JsonUtil.getJSONObject(demographicJsonIdentity, attribute);
 			if (json != null)
-				identityValues.add(json.get("value").toString());
+				identityValue = json.get("value").toString();
 		} else {
 			if (jsonObject != null)
-				identityValues.add(jsonObject.toString());
+				identityValue = (jsonObject.toString());
 		}
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				"", "Utilities::getIdJsonByAttribute()::exit");
-		return identityValues;
+		return identityValue;
 	}
 }
