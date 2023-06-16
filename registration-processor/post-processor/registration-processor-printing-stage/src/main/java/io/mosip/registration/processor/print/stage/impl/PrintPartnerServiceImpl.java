@@ -8,15 +8,13 @@ import io.mosip.registration.processor.packet.storage.utils.Utilities;
 import io.mosip.registration.processor.print.stage.PrintPartnerService;
 import org.json.simple.JSONObject;
 import org.mvel2.MVEL;
-import org.mvel2.integration.VariableResolverFactory;
-import org.mvel2.integration.impl.MapVariableResolverFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,10 +24,8 @@ import java.util.Set;
 public class PrintPartnerServiceImpl implements PrintPartnerService {
 
     private static final Logger regProcLogger = RegProcessorLogger.getLogger(PrintPartnerServiceImpl.class);
-    private static final String PRINT_ISSUERS = "mosip.registration.processor.print.issuers";
-    private static final String PRINT_ISSUER_ATTRIBUTE = "mosip.registration.processor.print.issuer.identification.attribute";
-    private static final String DEFAULT_ISSUER = "mosip.registration.processor.print.issuer.default";
-    private static final String COMMON_ISSUER = "mosip.registration.processor.print.issuer.common";
+    private static final String IDENTITY_ATTRIBUTE = "mosip.identification.attribute";
+    private static final String NO_MATCH_ISSUER = "mosip.registration.processor.print.issuer.noMatch";
 
     @Autowired
     private Environment env;
@@ -37,9 +33,8 @@ public class PrintPartnerServiceImpl implements PrintPartnerService {
     @Autowired
     private Utilities utilities;
 
-    @Autowired
-    @Qualifier("varresolver")
-    private VariableResolverFactory functionFactory;
+    @Value("#{${mosip.registration.processor.print.issuer.config-map:{}}}")
+    private Map<String, String> printPartnerExpression;
 
     @Override
     public Set<String> getPrintPartners(String regId, JSONObject identity) {
@@ -48,32 +43,38 @@ public class PrintPartnerServiceImpl implements PrintPartnerService {
                 regId, "PrintPartnerServiceImpl::getPrintPartners()::entry");
 
         Set<String> filteredPartners = new HashSet<>();
-        String configuredPrintIssuers = env.getProperty(PRINT_ISSUERS);
-        if (!StringUtils.hasText(configuredPrintIssuers)) {
+        if (printPartnerExpression.isEmpty()) {
             regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
                     LoggerFileConstant.REGISTRATIONID.toString(), regId,
                     PlatformErrorMessages.RPR_PRT_ISSUER_NOT_FOUND_IN_PROPERTY.name());
             return filteredPartners;
         }
         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                regId, "PrintPartnerServiceImpl::getPrintPartners()::" + configuredPrintIssuers);
+                regId, "PrintPartnerServiceImpl::getPrintPartners()::" + printPartnerExpression.toString());
 
-        var identityValues = utilities.getIdJsonByAttribute(identity, env.getProperty(PRINT_ISSUER_ATTRIBUTE));
+        String identityValue = utilities.getIdJsonByAttribute(identity, env.getProperty(IDENTITY_ATTRIBUTE));
 
         Map<String, Object> context = new HashMap<>();
-        context.put("printIssuers", configuredPrintIssuers);
-        context.put("attributeValues", identityValues);
-        context.put("commonPartner", env.getProperty(COMMON_ISSUER));
+        context.put(env.getProperty(IDENTITY_ATTRIBUTE), identityValue);
+        boolean printIssuerFound = false;
+        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                regId, "PrintPartnerServiceImpl::PrintPartnerExpression::" + printPartnerExpression.toString());
 
-        VariableResolverFactory myVarFactory = new MapVariableResolverFactory(context);
-        myVarFactory.setNextFactory(functionFactory);
-        Serializable serializable = MVEL.compileExpression("getConfiguredPartners(printIssuers, attributeValues, commonPartner);");
-        MVEL.executeExpression(serializable, context, myVarFactory, Set.class);
-        filteredPartners = (Set<String>) myVarFactory.getNextFactory().getVariableResolver("filteredPartners").getValue();
-        if (StringUtils.hasText(env.getProperty(DEFAULT_ISSUER))) {
-            filteredPartners.add(env.getProperty(DEFAULT_ISSUER));
+        for(Map.Entry<String, String> entry : printPartnerExpression.entrySet()) {
+            Boolean result = (Boolean) MVEL.eval(entry.getValue(), context);
+            if (result) {
+                filteredPartners.add(entry.getKey());
+                if (!ObjectUtils.nullSafeToString(entry.getValue()).equalsIgnoreCase("true")) {
+                    printIssuerFound = true;
+                }
+            }
         }
+        if (StringUtils.hasText(env.getProperty(NO_MATCH_ISSUER)) && !printIssuerFound) {
+            filteredPartners.add(env.getProperty(NO_MATCH_ISSUER));
+        }
+        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                regId, "PrintPartnerServiceImpl::FilteredPartners::" + filteredPartners.toString());
+
         return filteredPartners;
     }
-
 }
