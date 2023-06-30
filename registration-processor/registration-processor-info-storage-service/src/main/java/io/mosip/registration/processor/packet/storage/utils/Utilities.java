@@ -14,6 +14,7 @@ import io.mosip.kernel.core.util.exception.JsonProcessingException;
 import io.mosip.registration.processor.core.constant.JsonConstant;
 import io.mosip.registration.processor.core.exception.PacketManagerException;
 import io.mosip.registration.processor.core.packet.dto.FieldValue;
+import io.mosip.registration.processor.core.packet.dto.demographicinfo.JsonValue;
 import io.mosip.registration.processor.packet.manager.idreposervice.IdRepoService;
 import io.mosip.registration.processor.packet.storage.dto.ConfigEnum;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
@@ -206,7 +207,7 @@ public class Utilities {
 
 	/** The Constant RANDOMIZE_FALSE. */
 	private static final String RANDOMIZE_FALSE = ")?randomize=false";
-	
+
 	private static final String VALUE = "value";
 
 	private JSONObject mappingJsonObject = null;
@@ -252,7 +253,7 @@ public class Utilities {
 				id, "Utilities::getApplicantAge()::entry");
 
 		String applicantDob = packetManagerService.getFieldByMappingJsonKey(id, MappingJsonConstants.DOB, process, stageName);
-	    String applicantAge = packetManagerService.getFieldByMappingJsonKey(id, MappingJsonConstants.AGE, process, stageName);
+		String applicantAge = packetManagerService.getFieldByMappingJsonKey(id, MappingJsonConstants.AGE, process, stageName);
 		if (applicantDob != null) {
 			return calculateAge(applicantDob);
 		} else if (applicantAge != null) {
@@ -857,4 +858,38 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Returns attribute value from identity data.
+	 * @param demographicJsonIdentity
+	 * @param attribute
+	 * @return
+	 */
+	public String getIdJsonByAttribute(JSONObject demographicJsonIdentity, String attribute) {
+
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				"", "Utilities::getIdJsonByAttribute()::entry");
+		String identityValue = new String();
+
+		Object jsonObject = JsonUtil.getJSONValue(demographicJsonIdentity, attribute);
+		if (jsonObject instanceof ArrayList) {
+			String langCode = JsonUtil.getJSONValue(demographicJsonIdentity, MappingJsonConstants.LANG_CODE);
+			JSONArray node = JsonUtil.getJSONArray(demographicJsonIdentity, attribute);
+			JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, node);
+			if (jsonValues != null)
+				for (int count = 0; count < jsonValues.length; count++) {
+					if(!langCode.isEmpty() && jsonValues[count].getLanguage().equals(langCode))
+						identityValue = jsonValues[count].getValue();
+				}
+		} else if (jsonObject instanceof LinkedHashMap) {
+			JSONObject json = JsonUtil.getJSONObject(demographicJsonIdentity, attribute);
+			if (json != null)
+				identityValue = json.get("value").toString();
+		} else {
+			if (jsonObject != null)
+				identityValue = (jsonObject.toString());
+		}
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				"", "Utilities::getIdJsonByAttribute()::exit");
+		return identityValue;
+	}
 }
