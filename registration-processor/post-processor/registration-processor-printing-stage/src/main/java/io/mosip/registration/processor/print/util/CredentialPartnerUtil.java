@@ -3,8 +3,7 @@ package io.mosip.registration.processor.print.util;
 import io.mosip.kernel.core.exception.BaseCheckedException;
 import io.mosip.kernel.core.exception.ExceptionUtils;
 import io.mosip.kernel.core.logger.spi.Logger;
-import io.mosip.kernel.core.util.JsonUtils;
-import io.mosip.kernel.core.util.exception.JsonProcessingException;
+import io.mosip.registration.processor.core.constant.JsonConstant;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.constant.MappingJsonConstants;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
@@ -12,6 +11,7 @@ import io.mosip.registration.processor.core.exception.ApisResourceAccessExceptio
 import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
 import io.mosip.registration.processor.core.logger.RegProcessorLogger;
 import io.mosip.registration.processor.core.util.JsonUtil;
+import io.mosip.registration.processor.packet.storage.utils.OSIUtils;
 import io.mosip.registration.processor.packet.storage.utils.Utilities;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -71,7 +71,11 @@ public class CredentialPartnerUtil {
         try {
             Map<String, String> identityFieldValueMap = utilities.getPacketManagerService().getFields(regId,
                     requiredIdObjectFieldNames, registrationType, ProviderStageName.PRINTING);
-
+            if (requiredIdObjectFieldNames.contains(JsonConstant.CENTERID)) {
+                Map<String, String> metaInfo = utilities.getMetaInfo(regId,
+                        registrationType, ProviderStageName.PRINTING);
+                identityFieldValueMap.put(JsonConstant.CENTERID, metaInfo.get(JsonConstant.CENTERID));
+            }
             getFieldValueInIdRepo(uin, identityFieldValueMap);
 
             Map<String, Object> context = getContext(identityFieldValueMap);
@@ -113,14 +117,7 @@ public class CredentialPartnerUtil {
             List<String> keys = identityFieldValueMap.entrySet().stream().filter(e -> ObjectUtils.isEmpty(e.getValue())).map(Map.Entry::getKey).collect(Collectors.toList());
             if (keys != null && !keys.isEmpty()) {
                 JSONObject jsonObject = utilities.retrieveIdrepoJson(uin);
-                keys.forEach(key -> {
-                    try {
-                        identityFieldValueMap.put(key, JsonUtils.javaObjectToJsonString(jsonObject.get(key)));
-                    } catch (JsonProcessingException e) {
-                        regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), "",
-                                ExceptionUtils.getStackTrace(e));
-                    }
-                });
+                keys.forEach(key -> identityFieldValueMap.put(key, (jsonObject.get(key) != null) ? jsonObject.get(key).toString() : null));
             }
         }
     }
