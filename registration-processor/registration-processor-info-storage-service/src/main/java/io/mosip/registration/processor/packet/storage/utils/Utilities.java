@@ -1,24 +1,41 @@
 package io.mosip.registration.processor.packet.storage.utils;
 
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Period;
-import java.util.*;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.mosip.kernel.core.exception.ExceptionUtils;
+import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.kernel.core.util.exception.JsonProcessingException;
-import io.mosip.registration.processor.core.constant.JsonConstant;
-import io.mosip.registration.processor.core.exception.PacketManagerException;
-import io.mosip.registration.processor.core.packet.dto.FieldValue;
-import io.mosip.registration.processor.core.packet.dto.demographicinfo.JsonValue;
-import io.mosip.registration.processor.packet.manager.idreposervice.IdRepoService;
-import io.mosip.registration.processor.packet.storage.dto.ConfigEnum;
+import io.mosip.registration.processor.abis.queue.dto.AbisQueueDetails;
+import io.mosip.registration.processor.core.code.ApiName;
+import io.mosip.registration.processor.core.common.rest.dto.ErrorDTO;
+import io.mosip.registration.processor.core.constant.LoggerFileConstant;
+import io.mosip.registration.processor.core.constant.MappingJsonConstants;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
-import org.apache.commons.collections.MapUtils;
+import io.mosip.registration.processor.core.exception.ApisResourceAccessException;
+import io.mosip.registration.processor.core.exception.PacketManagerException;
+import io.mosip.registration.processor.core.exception.RegistrationProcessorCheckedException;
+import io.mosip.registration.processor.core.exception.RegistrationProcessorUnCheckedException;
+import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
+import io.mosip.registration.processor.core.idrepo.dto.IdResponseDTO1;
+import io.mosip.registration.processor.core.logger.RegProcessorLogger;
+import io.mosip.registration.processor.core.packet.dto.Identity;
+import io.mosip.registration.processor.core.packet.dto.vid.VidResponseDTO;
+import io.mosip.registration.processor.core.queue.factory.MosipQueue;
+import io.mosip.registration.processor.core.spi.packetmanager.PacketInfoManager;
+import io.mosip.registration.processor.core.spi.queue.MosipQueueConnectionFactory;
+import io.mosip.registration.processor.core.spi.restclient.RegistrationProcessorRestClientService;
+import io.mosip.registration.processor.core.util.JsonUtil;
+import io.mosip.registration.processor.packet.manager.idreposervice.IdRepoService;
+import io.mosip.registration.processor.packet.storage.dao.PacketInfoDao;
+import io.mosip.registration.processor.packet.storage.dto.ApplicantInfoDto;
+import io.mosip.registration.processor.packet.storage.dto.ConfigEnum;
+import io.mosip.registration.processor.packet.storage.exception.IdRepoAppException;
+import io.mosip.registration.processor.packet.storage.exception.ParsingException;
+import io.mosip.registration.processor.packet.storage.exception.QueueConnectionNotFound;
+import io.mosip.registration.processor.packet.storage.exception.VidCreationException;
+import io.mosip.registration.processor.status.dao.RegistrationStatusDao;
+import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
+import io.mosip.registration.processor.status.entity.RegistrationStatusEntity;
+import lombok.Data;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.simple.JSONArray;
@@ -29,42 +46,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.mosip.kernel.core.exception.ExceptionUtils;
-import io.mosip.kernel.core.logger.spi.Logger;
-import io.mosip.kernel.core.util.DateUtils;
-import io.mosip.registration.processor.abis.queue.dto.AbisQueueDetails;
-import io.mosip.registration.processor.core.code.ApiName;
-import io.mosip.registration.processor.core.common.rest.dto.ErrorDTO;
-import io.mosip.registration.processor.core.constant.LoggerFileConstant;
-import io.mosip.registration.processor.core.constant.MappingJsonConstants;
-import io.mosip.registration.processor.core.exception.ApisResourceAccessException;
-import io.mosip.registration.processor.core.exception.RegistrationProcessorCheckedException;
-import io.mosip.registration.processor.core.exception.RegistrationProcessorUnCheckedException;
-import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
-import io.mosip.registration.processor.core.idrepo.dto.IdRequestDto;
-import io.mosip.registration.processor.core.idrepo.dto.IdResponseDTO;
-import io.mosip.registration.processor.core.idrepo.dto.IdResponseDTO1;
-import io.mosip.registration.processor.core.idrepo.dto.RequestDto;
-import io.mosip.registration.processor.core.logger.RegProcessorLogger;
-import io.mosip.registration.processor.core.packet.dto.Identity;
-import io.mosip.registration.processor.core.packet.dto.vid.VidResponseDTO;
-import io.mosip.registration.processor.core.queue.factory.MosipQueue;
-import io.mosip.registration.processor.core.spi.packetmanager.PacketInfoManager;
-import io.mosip.registration.processor.core.spi.queue.MosipQueueConnectionFactory;
-import io.mosip.registration.processor.core.spi.restclient.RegistrationProcessorRestClientService;
-import io.mosip.registration.processor.core.util.JsonUtil;
-import io.mosip.registration.processor.packet.storage.dao.PacketInfoDao;
-import io.mosip.registration.processor.packet.storage.dto.ApplicantInfoDto;
-import io.mosip.registration.processor.packet.storage.exception.IdRepoAppException;
-import io.mosip.registration.processor.packet.storage.exception.ParsingException;
-import io.mosip.registration.processor.packet.storage.exception.QueueConnectionNotFound;
-import io.mosip.registration.processor.packet.storage.exception.VidCreationException;
-import io.mosip.registration.processor.status.dao.RegistrationStatusDao;
-import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
-import io.mosip.registration.processor.status.entity.RegistrationStatusEntity;
-import lombok.Data;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.util.*;
 
 /**
  * The Class Utilities.
@@ -174,6 +164,9 @@ public class Utilities {
 	/** The packet info manager. */
 	@Autowired
 	private PacketInfoManager<Identity, ApplicantInfoDto> packetInfoManager;
+
+	@Autowired
+	private OSIUtils osiUtils;
 
 	/** The Constant INBOUNDQUEUENAME. */
 	private static final String INBOUNDQUEUENAME = "inboundQueueName";
@@ -810,7 +803,6 @@ public class Utilities {
 			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 					"Utilities::retrieveIdrepoJson():: IDREPOGETIDBYUIN GET service call ended Successfully");
 		}
-
 		return response;
 	}
 
@@ -823,73 +815,25 @@ public class Utilities {
 		return centerId + "_" + machineId;
 	}
 
-	public JSONObject getMetaInfo(String id, String process, ProviderStageName stageName) throws ApisResourceAccessException, IOException, PacketManagerException, JsonProcessingException, JSONException {
+	/**
+	 * Get meta info by priority
+	 * @param id
+	 * @param process
+	 * @param stageName
+	 * @return
+	 * @throws ApisResourceAccessException
+	 * @throws IOException
+	 * @throws PacketManagerException
+	 * @throws JsonProcessingException
+	 * @throws JSONException
+	 */
+	public JSONObject getMetaInfo(String id, String process, ProviderStageName stageName) throws PacketManagerException, ApisResourceAccessException, IOException, JsonProcessingException, JSONException {
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				id, "Utilities::getMetaInfo()::entry");
 		Map<String, String> metaInfo = packetManagerService.getMetaInfo(id, process, stageName);
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 				"Utilities::getMetaInfo():: GET service call ended successfully");
-		return new JSONObject(getMetaMap(metaInfo));
+		return new JSONObject(osiUtils.getMetaMap(metaInfo));
 	}
 
-	public Map<String, String> getMetaMap(Map<String, String> metaInfo) throws java.io.IOException, JSONException {
-		Map<String, String> allMap = new HashMap<>();
-
-		if (MapUtils.isNotEmpty(metaInfo)) {
-			String operationsDataString = metaInfo.get(JsonConstant.OPERATIONSDATA);
-			String metaDataString = metaInfo.get(JsonConstant.METADATA);
-			if (io.mosip.kernel.core.util.StringUtils.isNotEmpty(operationsDataString)) {
-				org.json.JSONArray jsonArray = new org.json.JSONArray(operationsDataString);
-				addToMap(jsonArray, allMap);
-			}
-			if (io.mosip.kernel.core.util.StringUtils.isNotEmpty(metaDataString)) {
-				org.json.JSONArray jsonArray = new org.json.JSONArray(metaDataString);
-				addToMap(jsonArray, allMap);
-			}
-		}
-		return allMap;
-	}
-
-	private void addToMap(org.json.JSONArray jsonArray, Map<String, String> allMap) throws JSONException, IOException {
-		for (int i =0; i < jsonArray.length(); i++) {
-			org.json.JSONObject jsonObject = (org.json.JSONObject) jsonArray.get(i);
-			FieldValue fieldValue = objMapper.readValue(jsonObject.toString(), FieldValue.class);
-			allMap.put(fieldValue.getLabel(), fieldValue.getValue());
-		}
-	}
-
-	/**
-	 * Returns attribute value from identity data.
-	 * @param demographicJsonIdentity
-	 * @param attribute
-	 * @return
-	 */
-	public String getIdJsonByAttribute(JSONObject demographicJsonIdentity, String attribute) {
-
-		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-				"", "Utilities::getIdJsonByAttribute()::entry");
-		String identityValue = new String();
-
-		Object jsonObject = JsonUtil.getJSONValue(demographicJsonIdentity, attribute);
-		if (jsonObject instanceof ArrayList) {
-			String langCode = JsonUtil.getJSONValue(demographicJsonIdentity, MappingJsonConstants.LANG_CODE);
-			JSONArray node = JsonUtil.getJSONArray(demographicJsonIdentity, attribute);
-			JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, node);
-			if (jsonValues != null)
-				for (int count = 0; count < jsonValues.length; count++) {
-					if(!langCode.isEmpty() && jsonValues[count].getLanguage().equals(langCode))
-						identityValue = jsonValues[count].getValue();
-				}
-		} else if (jsonObject instanceof LinkedHashMap) {
-			JSONObject json = JsonUtil.getJSONObject(demographicJsonIdentity, attribute);
-			if (json != null)
-				identityValue = json.get("value").toString();
-		} else {
-			if (jsonObject != null)
-				identityValue = (jsonObject.toString());
-		}
-		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-				"", "Utilities::getIdJsonByAttribute()::exit");
-		return identityValue;
-	}
 }
