@@ -102,7 +102,7 @@
 		<dependency>
 			<groupId>io.mosip.registrationprocessor</groupId>
 			<artifactId>registration-processor-packet-manager</artifactId>
-			<version>${packet.manager.version}</version>
+			<version>1.2.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>io.mosip.kernel</groupId>
