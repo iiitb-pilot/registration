@@ -1,4 +1,4 @@
-name: Printing Stage Maven Package upon a push
+name: Registration Processor Group 1 Maven Package upon a push
 
 
 on: workflow_dispatch
@@ -55,14 +55,14 @@ jobs:
           name: release
           path: ./release.zip
 
-      - name: Build registration-processor-stage-group-7 image
+      - name: Build registration-processor-stage-group-1 image
         run: |
             # The Mosip Stage Executor is not packaged as part of release.zip
             cd "./$SERVICE_LOCATION"
             docker build . --build-arg SOURCE=mosip --build-arg COMMIT_HASH=$(git rev-parse HEAD) --build-arg COMMIT_ID=$(git rev-parse --short HEAD) --build-arg BUILD_TIME=${{steps.date.outputs.date}} --file Dockerfile --tag $SERVICE_NAME
         env:
-          SERVICE_NAME: registration-processor-stage-group-7
-          SERVICE_LOCATION: registration-processor/stage-groups/registration-processor-stage-group-7
+          SERVICE_NAME: registration-processor-stage-group-1
+          SERVICE_LOCATION: registration-processor/stage-groups/registration-processor-stage-group-1
 
       - name: Log into registry
         run: echo "${{ secrets.release_docker_hub }}" | docker login -u ${{ secrets.actor_docker_hub }} --password-stdin
@@ -84,5 +84,5 @@ jobs:
           docker push $IMAGE_ID:$VERSION
         env:
           NAMESPACE: ${{ secrets.dev_namespace_docker_hub }}
-          SERVICE_NAME: registration-processor-stage-group-7
-          SERVICE_LOCATION: registration-processor/stage-groups/registration-processor-stage-group-7
+          SERVICE_NAME: registration-processor-stage-group-1
+          SERVICE_LOCATION: registration-processor/stage-groups/registration-processor-stage-group-1
