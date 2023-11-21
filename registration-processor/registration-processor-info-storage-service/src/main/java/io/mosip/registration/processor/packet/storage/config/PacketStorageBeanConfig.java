@@ -79,7 +79,7 @@ public class PacketStorageBeanConfig {
 	}
 
 	@Bean
-	public OSIUtils getOsiUtils() {
+	public OSIUtils getOSIUtils() {
 		return new OSIUtils();
 	}
 
