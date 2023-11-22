@@ -46,9 +46,6 @@ public class ValidatorConfig {
     private static Logger logger = RegProcessorLogger.getLogger(ValidatorConfig.class);
 
 	@Autowired
-	private RestApiClient restApiClient;
-
-	@Autowired
 	private Environment env;
 
 	@Bean
