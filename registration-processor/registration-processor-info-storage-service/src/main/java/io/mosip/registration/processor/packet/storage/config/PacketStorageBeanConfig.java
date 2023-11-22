@@ -79,11 +79,6 @@ public class PacketStorageBeanConfig {
 	}
 
 	@Bean
-	public OSIUtils getOSIUtils() {
-		return new OSIUtils();
-	}
-
-	@Bean
 	public PacketManagerService packetManagerService() {
 		return new PacketManagerService();
 	}
