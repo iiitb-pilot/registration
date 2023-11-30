@@ -102,17 +102,17 @@ public class NotificationUtility {
 	/** The template generator. */
 	@Autowired
 	private TemplateGenerator templateGenerator;
-
+	
 	@Autowired
 	private LanguageUtility languageUtility;
 
 	/** The resclient. */
 	@Autowired
 	private RestApiClient resclient;
-
+	
 	@Autowired
 	private PriorityBasedPacketManagerService packetManagerService;
-
+	
 	/** The utility. */
 	@Autowired
 	private Utilities utility;
@@ -138,8 +138,8 @@ public class NotificationUtility {
 	private ObjectMapper mapper;
 
 	public void sendNotification(RegistrationAdditionalInfoDTO registrationAdditionalInfoDTO,
-								 InternalRegistrationStatusDto registrationStatusDto, SyncRegistrationEntity regEntity,
-								 String[] allNotificationTypes, boolean isProcessingSuccess)
+			InternalRegistrationStatusDto registrationStatusDto, SyncRegistrationEntity regEntity,
+			String[] allNotificationTypes, boolean isProcessingSuccess)
 			throws ApisResourceAccessException, IOException, PacketManagerException, JsonProcessingException, JSONException {
 		registrationId = regEntity.getRegistrationId();
 		LogDescription description = new LogDescription();
@@ -150,52 +150,52 @@ public class NotificationUtility {
 		attributes.put("RID", registrationId);
 		List<String> preferredLanguages=getPreferredLanguages(registrationStatusDto);
 		JSONObject regProcessorIdentityJson = utility.getRegistrationProcessorMappingJson(MappingJsonConstants.IDENTITY);
-		String nameField = JsonUtil.getJSONValue(
-				JsonUtil.getJSONObject(regProcessorIdentityJson, MappingJsonConstants.NAME),
-				MappingJsonConstants.VALUE);
+        String nameField = JsonUtil.getJSONValue(
+                JsonUtil.getJSONObject(regProcessorIdentityJson, MappingJsonConstants.NAME),
+                MappingJsonConstants.VALUE);
 		String[] nameArray = nameField.toString().split(",");
 		for(String preferredLanguage:preferredLanguages) {
-			if (registrationAdditionalInfoDTO.getName() != null) {
-				attributes.put(nameArray[0] + "_" + preferredLanguage, registrationAdditionalInfoDTO.getName());
-			} else {
-				attributes.put(nameArray[0] + "_" + preferredLanguage, "");
-			}
+		if (registrationAdditionalInfoDTO.getName() != null) {
+			attributes.put(nameArray[0] + "_" + preferredLanguage, registrationAdditionalInfoDTO.getName());
+		} else {
+			attributes.put(nameArray[0] + "_" + preferredLanguage, "");
+		}
 			if (nameArray.length > 1) {
 				for (int i = 1; i < nameArray.length; i++) {
 					attributes.put(nameArray[i] + "_" + preferredLanguage, "");
 				}
 			}
+		
+		if (isProcessingSuccess) {
+			type = setNotificationTemplateType(registrationStatusDto, type);
+		} else {
+			type = NotificationTemplateType.TECHNICAL_ISSUE;
+		}
+		if (type != null) {
+			setTemplateAndSubject(type, regType, messageSenderDTO);
+		}
 
-			if (isProcessingSuccess) {
-				type = setNotificationTemplateType(registrationStatusDto, type);
-			} else {
-				type = NotificationTemplateType.TECHNICAL_ISSUE;
-			}
-			if (type != null) {
-				setTemplateAndSubject(type, regType, messageSenderDTO);
-			}
-
-			if (allNotificationTypes != null) {
-				for (String notificationType : allNotificationTypes) {
-					if (notificationType.equalsIgnoreCase("EMAIL")
-							&& (registrationAdditionalInfoDTO.getEmail() != null
-							&& !registrationAdditionalInfoDTO.getEmail().isEmpty())) {
-						sendEmailNotification(registrationAdditionalInfoDTO, messageSenderDTO, attributes, description,preferredLanguage);
-					} else if (notificationType.equalsIgnoreCase("SMS") && (registrationAdditionalInfoDTO.getPhone() != null
-							&& !registrationAdditionalInfoDTO.getPhone().isEmpty())) {
-						sendSMSNotification(registrationAdditionalInfoDTO, messageSenderDTO, attributes, description,preferredLanguage);
-					}
+		if (allNotificationTypes != null) {
+			for (String notificationType : allNotificationTypes) {
+				if (notificationType.equalsIgnoreCase("EMAIL")
+						&& (registrationAdditionalInfoDTO.getEmail() != null
+						&& !registrationAdditionalInfoDTO.getEmail().isEmpty())) {
+					sendEmailNotification(registrationAdditionalInfoDTO, messageSenderDTO, attributes, description,preferredLanguage);
+				} else if (notificationType.equalsIgnoreCase("SMS") && (registrationAdditionalInfoDTO.getPhone() != null
+						&& !registrationAdditionalInfoDTO.getPhone().isEmpty())) {
+					sendSMSNotification(registrationAdditionalInfoDTO, messageSenderDTO, attributes, description,preferredLanguage);
 				}
 			}
 		}
+		}
 	}
 
-	private List<String> getPreferredLanguages(InternalRegistrationStatusDto registrationStatusDto) throws ApisResourceAccessException,
-			PacketManagerException, JsonProcessingException, IOException, JSONException {
+	private List<String> getPreferredLanguages(InternalRegistrationStatusDto registrationStatusDto) throws ApisResourceAccessException, 
+	PacketManagerException, JsonProcessingException, IOException, JSONException {
 		if(userPreferredLanguageAttribute!=null && !userPreferredLanguageAttribute.isBlank()) {
 			try {
-				String preferredLang=packetManagerService.getField(registrationStatusDto.getRegistrationId(), userPreferredLanguageAttribute,
-						registrationStatusDto.getRegistrationType(), ProviderStageName.PACKET_VALIDATOR);
+			String preferredLang=packetManagerService.getField(registrationStatusDto.getRegistrationId(), userPreferredLanguageAttribute,
+				registrationStatusDto.getRegistrationType(), ProviderStageName.PACKET_VALIDATOR);
 				if(preferredLang!=null && !preferredLang.isBlank()) {
 					List<String> codes=new ArrayList<>();
 					for(String lang:preferredLang.split(",")) {
@@ -207,47 +207,47 @@ public class NotificationUtility {
 				}
 			}catch(ApisResourceAccessException e) {
 				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationStatusDto.getRegistrationId(), PlatformErrorMessages.RPR_PGS_API_RESOURCE_NOT_AVAILABLE.name() + e.getMessage()
-								+ ExceptionUtils.getStackTrace(e));
+					registrationStatusDto.getRegistrationId(), PlatformErrorMessages.RPR_PGS_API_RESOURCE_NOT_AVAILABLE.name() + e.getMessage()
+							+ ExceptionUtils.getStackTrace(e));
 			}
 		}
 		if(defaultTemplateLanguages!=null && !defaultTemplateLanguages.isBlank()) {
 			return List.of(defaultTemplateLanguages.split(","));
 		}
-		Map<String,String> idValuesMap=packetManagerService.getAllFieldsByMappingJsonKeys(registrationStatusDto.getRegistrationId(),
+		Map<String,String> idValuesMap=packetManagerService.getAllFieldsByMappingJsonKeys(registrationStatusDto.getRegistrationId(), 
 				registrationStatusDto.getRegistrationType(), ProviderStageName.PACKET_VALIDATOR);
 		List<String> idValues=new ArrayList<>();
 		for(Entry<String, String> entry: idValuesMap.entrySet()) {
-			if(entry.getValue()!=null && !entry.getValue().isBlank()) {
-				idValues.add(entry.getValue());
-			}
+		      	if(entry.getValue()!=null && !entry.getValue().isBlank()) {
+		        	idValues.add(entry.getValue());
+		        }
 		}
 		Set<String> langSet=new HashSet<>();
 		for( String idValue:idValues) {
 			if(idValue!=null&& !idValue.isBlank()  ) {
 				if(isJSONArrayValid(idValue)) {
 					org.json.simple.JSONArray array=mapper.readValue(idValue, org.json.simple.JSONArray.class);
-					for(Object obj:array) {
+					for(Object obj:array) {	
 						org.json.simple.JSONObject json= new org.json.simple.JSONObject((Map) obj);
-						langSet.add( (String) json.get("language"));
+						langSet.add( (String) json.get("language"));	
 					}
 				}
 			}
 		}
 		return new ArrayList<>(langSet);
 	}
-
+	
 	public boolean isJSONArrayValid(String jsonArrayString) {
-		try {
-			new JSONArray(jsonArrayString);
-		} catch (JSONException ex) {
-			return false;
-		}
-		return true;
+	        try {
+	            new JSONArray(jsonArrayString);
+	        } catch (JSONException ex) {
+	            return false;
+	        }
+	    return true;
 	}
 
 	private void sendSMSNotification(RegistrationAdditionalInfoDTO registrationAdditionalInfoDTO,
-									 MessageSenderDTO messageSenderDTO, Map<String, Object> attributes, LogDescription description,String preferedLanguage) {
+			MessageSenderDTO messageSenderDTO, Map<String, Object> attributes, LogDescription description,String preferedLanguage) {
 		try {
 			SmsResponseDto smsResponse = sendSMS(registrationAdditionalInfoDTO,
 					messageSenderDTO.getSmsTemplateCode(), attributes,preferedLanguage);
@@ -274,7 +274,7 @@ public class NotificationUtility {
 	}
 
 	private SmsResponseDto sendSMS(RegistrationAdditionalInfoDTO registrationAdditionalInfoDTO, String templateTypeCode,
-								   Map<String, Object> attributes,String preferedLanguage) throws ApisResourceAccessException, IOException, JSONException {
+			Map<String, Object> attributes,String preferedLanguage) throws ApisResourceAccessException, IOException, JSONException {
 		SmsResponseDto response;
 		SmsRequestDto smsDto = new SmsRequestDto();
 		RequestWrapper<SmsRequestDto> requestWrapper = new RequestWrapper<>();
@@ -322,10 +322,10 @@ public class NotificationUtility {
 	}
 
 	private void sendEmailNotification(RegistrationAdditionalInfoDTO registrationAdditionalInfoDTO,
-									   MessageSenderDTO messageSenderDTO, Map<String, Object> attributes, LogDescription description,String preferedLanguage) {
+			MessageSenderDTO messageSenderDTO, Map<String, Object> attributes, LogDescription description,String preferedLanguage) {
 		try {
 			String subjectTemplateCode = messageSenderDTO.getSubjectTemplateCode();
-
+			
 			ResponseDto emailResponse = sendEmail(registrationAdditionalInfoDTO,
 					messageSenderDTO.getEmailTemplateCode(), subjectTemplateCode, attributes,preferedLanguage);
 			if (emailResponse.getStatus().equals("success")) {
@@ -350,7 +350,7 @@ public class NotificationUtility {
 	}
 
 	private ResponseDto sendEmail(RegistrationAdditionalInfoDTO registrationAdditionalInfoDTO, String templateTypeCode,
-								  String subjectTypeCode, Map<String, Object> attributes,String preferedLanguage) throws Exception {
+			String subjectTypeCode, Map<String, Object> attributes,String preferedLanguage) throws Exception {
 		ResponseDto response = null;
 
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(),
@@ -413,7 +413,7 @@ public class NotificationUtility {
 	}
 
 	private NotificationTemplateType setNotificationTemplateType(InternalRegistrationStatusDto registrationStatusDto,
-																 NotificationTemplateType type) {
+			NotificationTemplateType type) {
 		if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.LOST.getValue()))
 			type = NotificationTemplateType.LOST_UIN;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue()))
@@ -432,50 +432,50 @@ public class NotificationUtility {
 	}
 
 	private void setTemplateAndSubject(NotificationTemplateType templatetype, String regType,
-									   MessageSenderDTO MessageSenderDTO) {
+			MessageSenderDTO MessageSenderDTO) {
 		switch (templatetype) {
-			case NEW_REG:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(NEW_REG+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(NEW_REG+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(NEW_REG+SUB));
-				break;
-			case LOST_UIN:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(LOST_UIN+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(LOST_UIN+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(LOST_UIN+SUB));
-				break;
-			case UIN_UPDATE:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(UIN_UPDATE+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(UIN_UPDATE+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(UIN_UPDATE+SUB));
-				break;
-			case REPRINT_UIN:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(REPRINT_UIN+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(REPRINT_UIN+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(REPRINT_UIN+SUB));
-				break;
-			case ACTIVATE:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(ACTIVATE+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(ACTIVATE+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(ACTIVATE+SUB));
-				break;
-			case DEACTIVATE:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(DEACTIVATE+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(DEACTIVATE+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(DEACTIVATE+SUB));
-				break;
-			case RES_UPDATE:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(RES_UPDATE+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(RES_UPDATE+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(RES_UPDATE+SUB));
-				break;
-			case TECHNICAL_ISSUE:
-				MessageSenderDTO.setSmsTemplateCode(env.getProperty(TECHNICAL_ISSUE+SMS));
-				MessageSenderDTO.setEmailTemplateCode(env.getProperty(TECHNICAL_ISSUE+EMAIL));
-				MessageSenderDTO.setSubjectTemplateCode(env.getProperty(TECHNICAL_ISSUE+SUB));
-				break;
-			default:
-				break;
+		case NEW_REG:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(NEW_REG+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(NEW_REG+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(NEW_REG+SUB));
+			break;
+		case LOST_UIN:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(LOST_UIN+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(LOST_UIN+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(LOST_UIN+SUB));
+			break;
+		case UIN_UPDATE:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(UIN_UPDATE+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(UIN_UPDATE+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(UIN_UPDATE+SUB));
+			break;
+		case REPRINT_UIN:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(REPRINT_UIN+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(REPRINT_UIN+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(REPRINT_UIN+SUB));
+			break;
+		case ACTIVATE:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(ACTIVATE+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(ACTIVATE+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(ACTIVATE+SUB));
+			break;
+		case DEACTIVATE:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(DEACTIVATE+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(DEACTIVATE+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(DEACTIVATE+SUB));
+			break;
+		case RES_UPDATE:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(RES_UPDATE+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(RES_UPDATE+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(RES_UPDATE+SUB));
+			break;
+		case TECHNICAL_ISSUE:
+			MessageSenderDTO.setSmsTemplateCode(env.getProperty(TECHNICAL_ISSUE+SMS));
+			MessageSenderDTO.setEmailTemplateCode(env.getProperty(TECHNICAL_ISSUE+EMAIL));
+			MessageSenderDTO.setSubjectTemplateCode(env.getProperty(TECHNICAL_ISSUE+SUB));
+			break;
+		default:
+			break;
 		}
 	}
 }
