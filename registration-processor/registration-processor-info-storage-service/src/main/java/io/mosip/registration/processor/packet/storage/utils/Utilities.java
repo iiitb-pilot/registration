@@ -7,7 +7,6 @@ import io.mosip.kernel.core.util.exception.JsonProcessingException;
 import io.mosip.registration.processor.abis.queue.dto.AbisQueueDetails;
 import io.mosip.registration.processor.core.code.ApiName;
 import io.mosip.registration.processor.core.common.rest.dto.ErrorDTO;
-import io.mosip.registration.processor.core.constant.JsonConstant;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.constant.MappingJsonConstants;
 import io.mosip.registration.processor.core.constant.ProviderStageName;
@@ -18,7 +17,6 @@ import io.mosip.registration.processor.core.exception.RegistrationProcessorUnChe
 import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
 import io.mosip.registration.processor.core.idrepo.dto.IdResponseDTO1;
 import io.mosip.registration.processor.core.logger.RegProcessorLogger;
-import io.mosip.registration.processor.core.packet.dto.FieldValue;
 import io.mosip.registration.processor.core.packet.dto.Identity;
 import io.mosip.registration.processor.core.packet.dto.vid.VidResponseDTO;
 import io.mosip.registration.processor.core.queue.factory.MosipQueue;
@@ -38,7 +36,6 @@ import io.mosip.registration.processor.status.dao.RegistrationStatusDao;
 import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
 import io.mosip.registration.processor.status.entity.RegistrationStatusEntity;
 import lombok.Data;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.simple.JSONArray;
@@ -167,6 +164,9 @@ public class Utilities {
 	/** The packet info manager. */
 	@Autowired
 	private PacketInfoManager<Identity, ApplicantInfoDto> packetInfoManager;
+
+	@Autowired
+	private OSIUtils osiUtils;
 
 	/** The Constant INBOUNDQUEUENAME. */
 	private static final String INBOUNDQUEUENAME = "inboundQueueName";
@@ -827,34 +827,13 @@ public class Utilities {
 	 * @throws JsonProcessingException
 	 * @throws JSONException
 	 */
-	public Map<String, String> getMetaInfo(String id, String process, ProviderStageName stageName) throws PacketManagerException, ApisResourceAccessException, IOException, JsonProcessingException, JSONException {
+	public JSONObject getMetaInfo(String id, String process, ProviderStageName stageName) throws PacketManagerException, ApisResourceAccessException, IOException, JsonProcessingException, JSONException {
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				id, "Utilities::getMetaInfo()::entry");
 		Map<String, String> metaInfo = packetManagerService.getMetaInfo(id, process, stageName);
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 				"Utilities::getMetaInfo():: GET service call ended successfully");
-
-		return getMetaMap(metaInfo);
+		return new JSONObject(osiUtils.getMetaMap(metaInfo));
 	}
 
-	private Map<String, String> getMetaMap(Map<String, String> metaInfo) throws java.io.IOException, ApisResourceAccessException, PacketManagerException, JsonProcessingException, JSONException {
-
-		Map<String, String> allMap = new HashMap<>();
-		if (MapUtils.isNotEmpty(metaInfo)) {
-			String metaDataString = metaInfo.get(JsonConstant.METADATA);
-			if (io.mosip.kernel.core.util.StringUtils.isNotEmpty(metaDataString)) {
-				org.json.JSONArray jsonArray = new org.json.JSONArray(metaDataString);
-				addToMap(jsonArray, allMap);
-			}
-		}
-		return allMap;
-	}
-
-	private void addToMap(org.json.JSONArray jsonArray, Map<String, String> allMap) throws JSONException, IOException {
-		for (int i =0; i < jsonArray.length(); i++) {
-			org.json.JSONObject jsonObject = (org.json.JSONObject) jsonArray.get(i);
-			FieldValue fieldValue = objMapper.readValue(jsonObject.toString(), FieldValue.class);
-			allMap.put(fieldValue.getLabel(), fieldValue.getValue());
-		}
-	}
 }

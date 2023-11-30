@@ -55,9 +55,17 @@ public class SupervisorValidatorStage extends MosipVerticleAPIManager {
 	MosipEventBus mosipEventBus = null;
 
 	public void deployVerticle() {
-		mosipEventBus = this.getEventBus(this, clusterManagerUrl, workerPoolSize);
-		this.consumeAndSend(mosipEventBus, MessageBusAddress.SUPERVISOR_VALIDATOR_BUS_IN,
-				MessageBusAddress.SUPERVISOR_VALIDATOR_BUS_OUT, messageExpiryTimeLimit);
+//		mosipEventBus = this.getEventBus(this, clusterManagerUrl, workerPoolSize);
+//		this.consumeAndSend(mosipEventBus, MessageBusAddress.SUPERVISOR_VALIDATOR_BUS_IN,
+//				MessageBusAddress.SUPERVISOR_VALIDATOR_BUS_OUT, messageExpiryTimeLimit);
+		MessageDTO messageDTO=new MessageDTO();
+		messageDTO.setRid("30001100580001320231121060600");//eng-NEW
+		messageDTO.setWorkflowInstanceId("6acb66d0-e6cf-4599-bf97-c6fb14556421");
+		//messageDTO.setRid("10053100400002120231005123153");//eng&fra-NEW
+		//messageDTO.setWorkflowInstanceId("655d9546-7d27-4de9-a4e9-8eb9769b2c80");
+		//messageDTO.setRid("10053100400021120230929093825");//eng-UPDATE
+		//messageDTO.setWorkflowInstanceId("9bf298d0-e02b-4cee-a309-bf0701fd8320");
+		process(messageDTO);
 	}
 
 	@Override
