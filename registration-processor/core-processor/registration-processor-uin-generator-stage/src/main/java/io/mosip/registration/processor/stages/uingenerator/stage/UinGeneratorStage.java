@@ -1,11 +1,7 @@
 package io.mosip.registration.processor.stages.uingenerator.stage;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.JSONArray;
@@ -111,6 +107,7 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 	private static Logger regProcLogger = RegProcessorLogger.getLogger(UinGeneratorStage.class);
 	private static final String RECORD_ALREADY_EXISTS_ERROR = "IDR-IDC-012";
 	private static final String STAGE_PROPERTY_PREFIX = "mosip.regproc.uin.generator.";
+	private static final String SELECTED_HANDLES = "selectedHandles";
 	private static final String UIN = "UIN";
 	private static final String IDREPO_STATUS = "DRAFTED";
 
@@ -485,12 +482,17 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 							jsonList.add(hashMap);
 						}
 						demographicIdentity.putIfAbsent(e.getKey(), jsonList);
-					} else
+					} else if (e.getKey().equals(SELECTED_HANDLES) && value instanceof String) {
+						demographicIdentity.put(e.getKey(), Arrays.asList(value.split(",")));
+					} else {
 						demographicIdentity.putIfAbsent(e.getKey(), value);
+					}
 				} else
 					demographicIdentity.putIfAbsent(e.getKey(), value);
+
 			}
 		}
+
 	}
 
 	/**
