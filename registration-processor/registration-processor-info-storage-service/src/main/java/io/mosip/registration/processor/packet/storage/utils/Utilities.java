@@ -8,12 +8,9 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import io.mosip.registration.processor.core.idrepo.dto.IdRequestDTO1;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -74,7 +71,9 @@ import lombok.Data;
  */
 @Data
 public class Utilities {
-	/** The reg proc logger. */
+	/**
+	 * The reg proc logger.
+	 */
 	private static Logger regProcLogger = RegProcessorLogger.getLogger(Utilities.class);
 	private static final String SOURCE = "source";
 	private static final String PROCESS = "process";
@@ -83,19 +82,29 @@ public class Utilities {
 	private static Map<String, String> readerConfiguration;
 	private static Map<String, String> writerConfiguration;
 
-	/** The Constant UIN. */
+	/**
+	 * The Constant UIN.
+	 */
 	private static final String UIN = "UIN";
 
-	/** The Constant FILE_SEPARATOR. */
+	/**
+	 * The Constant FILE_SEPARATOR.
+	 */
 	public static final String FILE_SEPARATOR = "\\";
 
-	/** The Constant RE_PROCESSING. */
+	/**
+	 * The Constant RE_PROCESSING.
+	 */
 	private static final String RE_PROCESSING = "re-processing";
 
-	/** The Constant HANDLER. */
+	/**
+	 * The Constant HANDLER.
+	 */
 	private static final String HANDLER = "handler";
 
-	/** The Constant NEW_PACKET. */
+	/**
+	 * The Constant NEW_PACKET.
+	 */
 	private static final String NEW_PACKET = "New-packet";
 
 	@Value("${mosip.kernel.machineid.length}")
@@ -110,50 +119,72 @@ public class Utilities {
 	@Autowired
 	private IdRepoService idRepoService;
 
-	/** The rest client service. */
+	/**
+	 * The rest client service.
+	 */
 	@Autowired
 	private RegistrationProcessorRestClientService<Object> restClientService;
 
-	/** The mosip connection factory. */
+	/**
+	 * The mosip connection factory.
+	 */
 	@Autowired
 	private MosipQueueConnectionFactory<MosipQueue> mosipConnectionFactory;
 
 	@Value("${provider.packetreader.mosip}")
 	private String provider;
 
-	/** The config server file storage URL. */
+	/**
+	 * The config server file storage URL.
+	 */
 	@Value("${config.server.file.storage.uri}")
 	private String configServerFileStorageURL;
 
-	/** The get reg processor identity json. */
+	/**
+	 * The get reg processor identity json.
+	 */
 	@Value("${registration.processor.identityjson}")
 	private String getRegProcessorIdentityJson;
 
-	/** The get reg processor demographic identity. */
+	/**
+	 * The get reg processor demographic identity.
+	 */
 	@Value("${registration.processor.demographic.identity}")
 	private String getRegProcessorDemographicIdentity;
 
-	/** The get reg processor applicant type. */
+	/**
+	 * The get reg processor applicant type.
+	 */
 	@Value("${registration.processor.applicant.type}")
 	private String getRegProcessorApplicantType;
 
-	/** The dob format. */
+	/**
+	 * The dob format.
+	 */
 	@Value("${registration.processor.applicant.dob.format}")
 	private String dobFormat;
 
-	/** The elapse time. */
+	/**
+	 * The elapse time.
+	 */
 	@Value("${registration.processor.reprocess.elapse.time}")
 	private long elapseTime;
 
-	/** The registration processor abis json. */
+	/**
+	 * The registration processor abis json.
+	 */
 	@Value("${registration.processor.abis.json}")
 	private String registrationProcessorAbisJson;
 
-	/** The id repo update. */
+	/**
+	 * The id repo update.
+	 */
 	@Value("${registration.processor.id.repo.update}")
 	private String idRepoUpdate;
 
-	/** The vid version. */
+	/**
+	 * The vid version.
+	 */
 	@Value("${registration.processor.id.repo.vidVersion}")
 	private String vidVersion;
 
@@ -166,45 +197,71 @@ public class Utilities {
 	@Autowired
 	private PriorityBasedPacketManagerService packetManagerService;
 
-	/** The registration status dao. */
+	/**
+	 * The registration status dao.
+	 */
 	@Autowired
 	private RegistrationStatusDao registrationStatusDao;
 
-	/** The packet info manager. */
+	/**
+	 * The packet info manager.
+	 */
 	@Autowired
 	private PacketInfoManager<Identity, ApplicantInfoDto> packetInfoManager;
 
-	/** The Constant INBOUNDQUEUENAME. */
+	/**
+	 * The Constant INBOUNDQUEUENAME.
+	 */
 	private static final String INBOUNDQUEUENAME = "inboundQueueName";
 
-	/** The Constant OUTBOUNDQUEUENAME. */
+	/**
+	 * The Constant OUTBOUNDQUEUENAME.
+	 */
 	private static final String OUTBOUNDQUEUENAME = "outboundQueueName";
 
-	/** The Constant ABIS. */
+	/**
+	 * The Constant ABIS.
+	 */
 	private static final String ABIS = "abis";
 
-	/** The Constant USERNAME. */
+	/**
+	 * The Constant USERNAME.
+	 */
 	private static final String USERNAME = "userName";
 
-	/** The Constant PASSWORD. */
+	/**
+	 * The Constant PASSWORD.
+	 */
 	private static final String PASSWORD = "password";
 
-	/** The Constant BROKERURL. */
+	/**
+	 * The Constant BROKERURL.
+	 */
 	private static final String BROKERURL = "brokerUrl";
 
-	/** The Constant TYPEOFQUEUE. */
+	/**
+	 * The Constant TYPEOFQUEUE.
+	 */
 	private static final String TYPEOFQUEUE = "typeOfQueue";
 
-	/** The Constant NAME. */
+	/**
+	 * The Constant NAME.
+	 */
 	private static final String NAME = "name";
 
-	/** The Constant NAME. */
+	/**
+	 * The Constant NAME.
+	 */
 	private static final String INBOUNDMESSAGETTL = "inboundMessageTTL";
 
-	/** The Constant FAIL_OVER. */
+	/**
+	 * The Constant FAIL_OVER.
+	 */
 	private static final String FAIL_OVER = "failover:(";
 
-	/** The Constant RANDOMIZE_FALSE. */
+	/**
+	 * The Constant RANDOMIZE_FALSE.
+	 */
 	private static final String RANDOMIZE_FALSE = ")?randomize=false";
 
 	private static final String VALUE = "value";
@@ -498,7 +555,7 @@ public class Utilities {
 				"Utilities::getAbisQueueDetails()::entry");
 
 		try {
-			if(regProcessorAbisJson==null) {
+			if (regProcessorAbisJson == null) {
 				String registrationProcessorAbis = Utilities.getJson(configServerFileStorageURL, registrationProcessorAbisJson);
 				regProcessorAbisJson = JsonUtil.objectMapperReadValue(registrationProcessorAbis, JSONObject.class);
 			}
@@ -600,6 +657,46 @@ public class Utilities {
 
 	}
 
+	public String getUINByHandle(String id, String process, ProviderStageName stageName)
+			throws IOException, ApisResourceAccessException, PacketManagerException, JsonProcessingException {
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id,
+				"Utilities::getUINByHandle()::entry");
+		String handle = packetManagerService.getFieldByMappingJsonKey(id, MappingJsonConstants.NRCID, process, stageName);
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id,
+				"Utilities::getUINByHandle()::handleRetrieved");
+		if (handle != null) {
+			IdRequestDTO1 idRequestDTO = new IdRequestDTO1();
+			idRequestDTO.setId(handle.concat("@nrcid"));
+			idRequestDTO.setIdType("handle");
+
+			IdResponseDTO1 idResponseDto = (IdResponseDTO1) restClientService.postApi(ApiName.IDREPORETRIEVEIDBYID, "", "", idRequestDTO, IdResponseDTO1.class);
+			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+					"Utilities::getUINByHandle():: IDREPORETRIEVEIDBYID POST service call ended Successfully");
+
+			if (idResponseDto != null) {
+				ResponseDTO responseDTO = (ResponseDTO) idResponseDto.getResponse();
+				String response = objMapper.writeValueAsString(responseDTO.getIdentity());
+				regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"Utilities::retrieveIdrepoJson():: IDREPOGETIDBYUIN GET service call ended Successfully");
+				try {
+					JSONObject jsonObject = (JSONObject) new JSONParser().parse(response);
+					String uin=JsonUtil.getJSONValue(jsonObject, "UIN");
+					return uin;
+				} catch (org.json.simple.parser.ParseException e) {
+					regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+							ExceptionUtils.getStackTrace(e));
+					throw new IdRepoAppException("Error while parsing string to JSONObject", e);
+				}
+			} else {
+				regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"Utilities::getUINByHandle():: IDREPORETRIEVEIDBYID POST service Returned NULL");
+			}
+
+		}
+		return null;
+	}
+
+
 	/**
 	 * Gets the elapse status.
 	 *
@@ -641,7 +738,7 @@ public class Utilities {
 	 * @return the latest transaction id
 	 */
 	public String getLatestTransactionId(String registrationId, String process, int iteration,
-			String workflowInstanceId) {
+										 String workflowInstanceId) {
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "Utilities::getLatestTransactionId()::entry");
 		RegistrationStatusEntity entity = registrationStatusDao.find(registrationId, process, iteration,
