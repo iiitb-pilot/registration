@@ -664,6 +664,11 @@ public class Utilities {
 		String handle = packetManagerService.getFieldByMappingJsonKey(id, MappingJsonConstants.NRCID, process, stageName);
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id,
 				"Utilities::getUINByHandle()::handleRetrieved");
+		JSONObject jsonObject = getIdentityJSONObjectByHandle(handle);
+		return JsonUtil.getJSONValue(jsonObject, "UIN");
+	}
+
+	public JSONObject getIdentityJSONObjectByHandle(String handle) throws ApisResourceAccessException {
 		if (handle != null) {
 			IdRequestDTO1 idRequestDTO = new IdRequestDTO1();
 			idRequestDTO.setId(handle.concat("@nrcid"));
@@ -673,23 +678,22 @@ public class Utilities {
 			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 					"Utilities::getUINByHandle():: IDREPORETRIEVEIDBYID POST service call ended Successfully");
 
-			if (idResponseDto != null) {
-				ResponseDTO responseDTO = (ResponseDTO) idResponseDto.getResponse();
-				String response = objMapper.writeValueAsString(responseDTO.getIdentity());
-				regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
-						"Utilities::retrieveIdrepoJson():: IDREPOGETIDBYUIN GET service call ended Successfully");
+			if (idResponseDto != null && idResponseDto.getResponse() != null) {
 				try {
-					JSONObject jsonObject = (JSONObject) new JSONParser().parse(response);
-					String uin=JsonUtil.getJSONValue(jsonObject, "UIN");
-					return uin;
-				} catch (org.json.simple.parser.ParseException e) {
+					ResponseDTO responseDTO = idResponseDto.getResponse();
+					String response = objMapper.writeValueAsString(responseDTO.getIdentity());
+					regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+							"Utilities::getIdentityJSONObjectByHandle():: IDREPORETRIEVEIDBYID POST service call ended Successfully");
+					return (JSONObject) new JSONParser().parse(response);
+
+				} catch (org.json.simple.parser.ParseException | com.fasterxml.jackson.core.JsonProcessingException e) {
 					regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 							ExceptionUtils.getStackTrace(e));
 					throw new IdRepoAppException("Error while parsing string to JSONObject", e);
 				}
 			} else {
 				regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
-						"Utilities::getUINByHandle():: IDREPORETRIEVEIDBYID POST service Returned NULL");
+						"Utilities::getIdentityJSONObjectByHandle():: IDREPORETRIEVEIDBYID POST service Returned NULL");
 			}
 
 		}

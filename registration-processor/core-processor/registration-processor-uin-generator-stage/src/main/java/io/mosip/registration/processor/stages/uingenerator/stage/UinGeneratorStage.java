@@ -1,11 +1,7 @@
 package io.mosip.registration.processor.stages.uingenerator.stage;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.JSONArray;
@@ -249,6 +245,15 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 				Map<String, String> fieldMap = packetManagerService.getFields(registrationId,
 						idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
 				String uinField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.UIN, MappingJsonConstants.IDENTITY));
+
+				if (StringUtils.isEmpty(uinField) || uinField.equalsIgnoreCase("null")) {
+					String selectedHandleField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.SELECTED_HANDLES, MappingJsonConstants.IDENTITY));
+					String handleField = fieldMap.get(selectedHandleField);
+					if (StringUtils.isNotEmpty(handleField) && !handleField.equalsIgnoreCase("null")) {
+						JSONObject jsonObject = utility.getIdentityJSONObjectByHandle(handleField);
+						uinField = JsonUtil.getJSONValue(jsonObject, "UIN");
+					}
+				}
 
 				JSONObject demographicIdentity = new JSONObject();
 				demographicIdentity.put(MappingJsonConstants.IDSCHEMA_VERSION, convertIdschemaToDouble ? Double.valueOf(schemaVersion) : schemaVersion);
