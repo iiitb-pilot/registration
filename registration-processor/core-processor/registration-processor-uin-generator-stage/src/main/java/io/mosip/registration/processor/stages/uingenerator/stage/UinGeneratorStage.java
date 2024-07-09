@@ -246,9 +246,10 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 						idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
 				String uinField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.UIN, MappingJsonConstants.IDENTITY));
 
-				if (StringUtils.isEmpty(uinField) || uinField.equalsIgnoreCase("null")) {
-					String selectedHandleField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.SELECTED_HANDLES, MappingJsonConstants.IDENTITY));
-					String handleField = fieldMap.get(selectedHandleField);
+				if ((StringUtils.isEmpty(uinField) || uinField.equalsIgnoreCase("null"))
+						&& (RegistrationType.UPDATE.toString().equalsIgnoreCase(object.getReg_type())
+						|| (RegistrationType.RES_UPDATE.toString().equalsIgnoreCase(object.getReg_type())))) {
+					String handleField = fieldMap.get(MappingJsonConstants.NRCID);
 					if (StringUtils.isNotEmpty(handleField) && !handleField.equalsIgnoreCase("null")) {
 						JSONObject jsonObject = utility.getIdentityJSONObjectByHandle(handleField);
 						uinField = JsonUtil.getJSONValue(jsonObject, "UIN");
