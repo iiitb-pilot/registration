@@ -438,3 +438,35 @@ jobs:
           NAMESPACE: ${{ secrets.dev_namespace_docker_hub }}
           SERVICE_NAME: registration-processor-notification-service
           SERVICE_LOCATION: registration-processor/registration-processor-notification-service
+
+      - name: Build registration-processor-reprocessor image
+        run: |
+          # The Mosip Stage Executor is not packaged as part of release.zip
+          cd "./$SERVICE_LOCATION"
+          docker build . --build-arg SOURCE=mosip --build-arg COMMIT_HASH=$(git rev-parse HEAD) --build-arg COMMIT_ID=$(git rev-parse --short HEAD) --build-arg BUILD_TIME=${{steps.date.outputs.date}} --file Dockerfile --tag $SERVICE_NAME
+        env:
+          SERVICE_NAME: registration-processor-reprocessor
+          SERVICE_LOCATION: registration-processor/workflow-engine/registration-processor-reprocessor
+
+      - name: Log into registry
+        run: echo "${{ secrets.release_docker_hub }}" | docker login -u ${{ secrets.actor_docker_hub }} --password-stdin
+
+      - name: Push image
+        run: |
+          IMAGE_ID=$NAMESPACE/$SERVICE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+            if [[ $BRANCH_NAME == master ]]; then
+              VERSION=latest
+            else
+          VERSION=$BRANCH_NAME
+            fi
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $SERVICE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+        env:
+          NAMESPACE: ${{ secrets.dev_namespace_docker_hub }}
+          SERVICE_NAME: registration-processor-reprocessor
+          SERVICE_LOCATION: registration-processor/workflow-engine/registration-processor-reprocessor
