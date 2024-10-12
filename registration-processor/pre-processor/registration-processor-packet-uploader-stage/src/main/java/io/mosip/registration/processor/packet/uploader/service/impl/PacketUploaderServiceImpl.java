@@ -420,9 +420,16 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                     if (source.getKey().endsWith(ZIP)) {
                         InputStream decryptedData = decryptor
                                 .decrypt(id, utility.getRefId(id, refId), source.getValue());
+                        long startTime = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(decryptedData);
-                    } else
+                        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan ZIP file " + (System.currentTimeMillis() - startTime) + " (ms)");
+                    } else {
+                        long startTime = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(source.getValue());
+                        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan JSON file " + (System.currentTimeMillis() - startTime) + " (ms)");
+                    }
                     if (!isInputFileClean)
                         break;
                 }
