@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.mosip.kernel.core.util.CryptoUtil;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,6 +118,7 @@ public class AbisHandlerStage extends MosipVerticleAPIManager {
 
 	/** The reg proc logger. */
 	private static Logger regProcLogger = RegProcessorLogger.getLogger(AbisHandlerStage.class);
+
 
 	/** The core audit request builder. */
 	@Autowired
@@ -561,6 +563,9 @@ public class AbisHandlerStage extends MosipVerticleAPIManager {
 				id, individualBiometricsLabel, modalities, process, ProviderStageName.BIO_DEDUPE);
 		abisHandlerUtil.validateBiometricRecord(biometricRecord, modalities);
 		byte[] content = cbeffutil.createXML(BIRConverter.convertSegmentsToBIRList(biometricRecord.getSegments()));
+
+		String encodedContent = CryptoUtil.encodeToURLSafeBase64(content);
+		regProcLogger.info("CBEFF file (Base64) for ID [{}]: {}", id, encodedContent);
 
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("name", individualBiometricsLabel);

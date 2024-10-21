@@ -681,6 +681,8 @@ public class ManualVerificationServiceImpl implements ManualVerificationService 
 			BiometricRecord biometricRecord = packetManagerService.getBiometrics(
 					id, individualBiometricsLabel, modalities, process, ProviderStageName.MANUAL_VERIFICATION);
 			byte[] content = cbeffutil.createXML(BIRConverter.convertSegmentsToBIRList(biometricRecord.getSegments()));
+						String encodedContent = CryptoUtil.encodeToURLSafeBase64(content);
+			regProcLogger.info("CBEFF file (Base64) for ID [{}] being sent to Manual Verification: {}", id, encodedContent);
 			requestDto.setBiometrics(content != null ? CryptoUtil.encodeBase64(content) : null);
 		}
 
@@ -709,7 +711,12 @@ public class ManualVerificationServiceImpl implements ManualVerificationService 
 			throw new DataShareException(response == null ? "Datashare response is null" : response.get(ERRORS).toString());
 
 		LinkedHashMap datashare = (LinkedHashMap) response.get(DATASHARE);
-		return datashare.get(URL) != null ? datashare.get(URL).toString() : null;
+
+		//return datashare.get(URL) != null ? datashare.get(URL).toString() : null;
+		// Log the reference URL
+		String referenceURL = datashare.get(URL) != null ? datashare.get(URL).toString() : null;
+		regProcLogger.info("Reference URL for ID [{}]: {}", id, referenceURL);
+		return referenceURL;
 	}
 
 	private Map<String, String> getPolicyMap(LinkedHashMap<String, Object> policies) throws DataShareException, IOException, ApisResourceAccessException {
