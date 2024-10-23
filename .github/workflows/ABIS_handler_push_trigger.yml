@@ -62,7 +62,7 @@ jobs:
             docker build . --build-arg SOURCE=mosip --build-arg COMMIT_HASH=$(git rev-parse HEAD) --build-arg COMMIT_ID=$(git rev-parse --short HEAD) --build-arg BUILD_TIME=${{steps.date.outputs.date}} --file Dockerfile --tag $SERVICE_NAME
         env:
           SERVICE_NAME: registration-processor-abis-handler-stage
-          SERVICE_LOCATION: registration-processor/core-processor\registration-processor-abis-handler-stage
+          SERVICE_LOCATION: registration-processor/core-processor/registration-processor-abis-handler-stage
 
       - name: Log into registry
         run: echo "${{ secrets.release_docker_hub }}" | docker login -u ${{ secrets.actor_docker_hub }} --password-stdin
@@ -85,4 +85,4 @@ jobs:
         env:
           NAMESPACE: ${{ secrets.dev_namespace_docker_hub }}
           SERVICE_NAME: registration-processor-abis-handler-stage
-          SERVICE_LOCATION: registration-processor/core-processor\registration-processor-abis-handler-stage
+          SERVICE_LOCATION: registration-processor/core-processor/registration-processor-abis-handler-stage
