@@ -1,7 +1,6 @@
 package io.mosip.registration.processor.stages.validator.impl;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -9,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import io.mosip.kernel.core.logger.spi.Logger;
-import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.core.util.JsonUtils;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.logger.RegProcessorLogger;
@@ -77,8 +75,6 @@ public class BiometricsSignatureValidator {
 		List<BIR> birs = biometricRecord.getSegments();
 
 		for (BIR bir : birs) {
-			regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "Performing Signature Validation Started : Type : " + bir.getBdbInfo().getType(), "Sub Type : " + bir.getBdbInfo().getSubtype(),
-					mapper.writeValueAsString(bir));
 			HashMap<String, String> othersInfo = bir.getOthers();
 			if (othersInfo == null) {
 				throw new BiometricSignatureValidationException("Others value is null inside BIR");
@@ -99,12 +95,6 @@ public class BiometricsSignatureValidator {
 			}
 
 			String token = BiometricsSignatureHelper.extractJWTToken(bir);
-			regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "SB : Type : " + bir.getBdbInfo().getType(), "Sub Type : " + bir.getBdbInfo().getSubtype(),
-					mapper.writeValueAsString(new String(bir.getSb(), StandardCharsets.UTF_8)));
-			regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "BDB : Type : " + bir.getBdbInfo().getType(), "Sub Type : " + bir.getBdbInfo().getSubtype(),
-					mapper.writeValueAsString(CryptoUtil.encodeToURLSafeBase64(bir.getBdb())));
-			regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "Token : Type : " + bir.getBdbInfo().getType(), "Sub Type : " + bir.getBdbInfo().getSubtype(),
-					mapper.writeValueAsString(token));
 			validateJWTToken(id, token);
 		}
 
@@ -152,12 +142,8 @@ public class BiometricsSignatureValidator {
 				.parse(DateUtils.getUTCCurrentDateTimeString(env.getProperty(DATETIME_PATTERN)), format);
 		request.setRequesttime(localdatetime);
 
-		regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "Request for Signature Validation : ", "Before Calling Key Manager",
-				mapper.writeValueAsString(request));
 		ResponseWrapper<?> responseWrapper = (ResponseWrapper<?>) registrationProcessorRestService
 				.postApi(ApiName.JWTVERIFY, "", "", request, ResponseWrapper.class);
-		regProcLogger.info(LoggerFileConstant.REGISTRATIONID.toString(), "Response for Signature Validation : ", "After Calling Key Manager",
-				mapper.writeValueAsString(responseWrapper));
 		if (responseWrapper.getResponse() != null) {
 			JWTSignatureVerifyResponseDto jwtResponse = mapper.readValue(
 					mapper.writeValueAsString(responseWrapper.getResponse()), JWTSignatureVerifyResponseDto.class);
