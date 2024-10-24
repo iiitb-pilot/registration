@@ -89,7 +89,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.getApi(uriComponents.toUri(), responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "Get API for  - " + uriComponents.toUri().toString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "Get API for  - " + uriComponents.toUri().toString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 			} catch (Exception e) {
 				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
@@ -142,7 +142,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.getApi(uriComponents.toUri(), responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "Get API for  - " + uriComponents.toUri().toString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "Get API for  - " + uriComponents.toUri().toString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -185,7 +185,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.postApi(builder.toUriString(), mediaType, requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -260,7 +260,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.postApi(builder.toUriString(), null, requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -310,7 +310,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.postApi(builder.toUriString(), mediaType, requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -369,7 +369,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.patchApi(builder.toUriString(), requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "PATCH API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "PATCH API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -428,7 +428,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.putApi(builder.toUriString(), requestedData, responseType, mediaType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "PUT API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "PUT API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -486,7 +486,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.postApi(builder.toUriString(), mediaType, requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "POST API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
@@ -539,7 +539,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 				Long startTime = System.nanoTime();
 				obj = restApiClient.headApi(uriComponents.toUri());
 				Long timeDifference = System.nanoTime()-startTime;
-				regProcLogger.info("SESSION_ID", "GET API Call", "RESPONSE", "HEAD API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "HEAD API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
 
 
 			} catch (Exception e) {
