@@ -100,16 +100,16 @@ public class IdrepoDraftService {
             idRequestDto.setRequest(requestDto);
 
         }
+        JSONObject identityObj = mapper.readValue(mapper.writeValueAsString(idRequestDto.getRequest().getIdentity()), JSONObject.class);
+        String reqUin = mapper.writeValueAsString(identityObj.get(UIN));
+        String verifiedAttribute = mapper.writeValueAsString(identityObj.get("verifiedAttributes"));
+        String registrationId = mapper.writeValueAsString(identityObj.get("registrationId"));
+        regProcLogger.info("Request sent for patch API - UIN " + id + " - " + reqUin);
+        regProcLogger.info("Request sent for patch API - VerifiedAttributes " + id + " - " + verifiedAttribute);
+        regProcLogger.info("Request sent for patch API - RegistrationId " + id + " - " + registrationId);
         IdResponseDTO response = (IdResponseDTO) registrationProcessorRestClientService.patchApi(
                 ApiName.IDREPOUPDATEDRAFT, Lists.newArrayList(id), null, null, idRequestDto, IdResponseDTO.class);
         if (response.getErrors() != null && !response.getErrors().isEmpty()) {
-            JSONObject newIdentity = mapper.readValue(mapper.writeValueAsString(idRequestDto.getRequest().getIdentity()), JSONObject.class);
-            String reqUin = mapper.writeValueAsString(newIdentity.get(UIN));
-            String verifiedAttribute = mapper.writeValueAsString(newIdentity.get("verifiedAttributes"));
-            String registrationId = mapper.writeValueAsString(newIdentity.get("registrationId"));
-            regProcLogger.info("Request sent for patch API - UIN " + id + " - " + reqUin);
-            regProcLogger.info("Request sent for patch API - VerifiedAttributes " + id + " - " + verifiedAttribute);
-            regProcLogger.info("Request sent for patch API - RegistrationId " + id + " - " + registrationId);
 			ErrorDTO error = response.getErrors().get(0);
 			regProcLogger.error("Error occured while updating draft for id : " + id, error.toString());
 			if (response.getErrors().get(0).getErrorCode().equalsIgnoreCase(ID_REPO_KEY_MANAGER_ERROR)) {
