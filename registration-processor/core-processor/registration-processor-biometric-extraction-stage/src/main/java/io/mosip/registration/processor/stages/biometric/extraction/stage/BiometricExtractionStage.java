@@ -157,6 +157,7 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	 */
 	@Override
 	public MessageDTO process(MessageDTO object) {
+		Long startTime = System.currentTimeMillis();
 		boolean isTransactionSuccessful = Boolean.FALSE;
 		object.setMessageBusAddress(MessageBusAddress.BIOMETRIC_EXTRACTION_BUS_IN);
 		object.setInternalError(Boolean.FALSE);
@@ -166,13 +167,16 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 		InternalRegistrationStatusDto registrationStatusDto=null;
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "BiometricExtractionStage::process()::entry");
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				registrationId, "Before Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
 			try {
 		registrationStatusDto = registrationStatusService.getRegistrationStatus(
 				registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
 			registrationStatusDto
 					.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.BIOMETRIC_EXTRACTION.toString());
 			registrationStatusDto.setRegistrationStageName(getStageName());
-
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						registrationId, "After Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
 
 			if(!idrepoDraftService.idrepoHasDraft(registrationStatusDto.getRegistrationId())) {
 				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
@@ -194,10 +198,16 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 						StatusUtil.BIOMETRIC_EXTRACTION_DRAFT_REQUEST_UNAVAILABLE.getMessage());
 			}
 			else {
-				ExtractorsDto extractorsDto=getExtractors(registrationStatusDto.getRegistrationId());
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						registrationId, "Record Found in Idrepo in Draft Status " + (System.currentTimeMillis()-startTime) + " ms");
+				ExtractorsDto extractorsDto=getExtractors(registrationStatusDto.getRegistrationId(), startTime);				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						registrationId, "After Call of BIOSDK " + (System.currentTimeMillis()-startTime) + " ms");
+
 				if(extractorsDto.getExtractors()!=null && !extractorsDto.getExtractors().isEmpty()) {
 					for(ExtractorDto dto:extractorsDto.getExtractors()) {
-						addBiometricExtractiontoIdRepository(dto,registrationStatusDto.getRegistrationId());
+						addBiometricExtractiontoIdRepository(dto,registrationStatusDto.getRegistrationId(), startTime);
+						regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+								registrationId, "Completed Extraction saved into IDrepo " + (System.currentTimeMillis()-startTime) + " ms");
 					}
 				}
 				else {
@@ -349,7 +359,7 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	 *
 	 */
 	private IdResponseDTO addBiometricExtractiontoIdRepository(ExtractorDto dto,
-			String registrationId)
+			String registrationId, Long startTime)
 			throws ApisResourceAccessException, IdrepoDraftReprocessableException, IdrepoDraftException {
 		String extractionFormat = "";
 		if(dto.getBiometric().equals("iris")) {
@@ -360,8 +370,11 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 			extractionFormat="fingerExtractionFormat";
 		}
 		List<String> segments=List.of(registrationId);
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				registrationId, "Before putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
 		IdResponseDTO response= (IdResponseDTO) registrationProcessorRestClientService.putApi(ApiName.IDREPOEXTRACTBIOMETRICS, segments, extractionFormat, dto.getAttributeName(), null, IdResponseDTO.class, null);
-
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+				registrationId, "After putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
 		if (response.getErrors() != null && !response.getErrors().isEmpty()) {
 			ErrorDTO error = response.getErrors().get(0);
 			regProcLogger.error("Error occured while updating draft for id : " + registrationId, error.toString());
@@ -385,7 +398,7 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	 * @throws JsonParseException 
 	 * @throws RegistrationProcessorCheckedException 
 	 */
-	private ExtractorsDto getExtractors(String id) throws JSONException, ApisResourceAccessException, JsonParseException, JsonMappingException, JsonProcessingException, IOException, RegistrationProcessorCheckedException {
+	private ExtractorsDto getExtractors(String id, Long startTime) throws JSONException, ApisResourceAccessException, JsonParseException, JsonMappingException, JsonProcessingException, IOException, RegistrationProcessorCheckedException {
 		JSONArray jArray=new JSONArray(partnerPolicyIdsJson);
 		ExtractorsDto extractorsDto=new ExtractorsDto();
 		 List<ErrorDTO> errors = new ArrayList<>();
@@ -394,9 +407,12 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 			pathsegments.add(jArray.getJSONObject(i).getString("partnerId"));
 			pathsegments.add("bioextractors");
 			pathsegments.add(jArray.getJSONObject(i).getString("policyId"));
-			
+			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					id, "Before Calling BIOSDK " + (System.currentTimeMillis()-startTime) + " ms");
 			ResponseWrapper<?> responseWrapper=(ResponseWrapper<?>) registrationProcessorRestClientService.
 					getApi(ApiName.PARTNERGETBIOEXTRACTOR, pathsegments, "", "", ResponseWrapper.class);
+			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					id, "After Calling BIOSDK " + (System.currentTimeMillis()-startTime) + " ms");
 			if(responseWrapper.getResponse() !=null) {
 				extractorsDto=mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()),
 					ExtractorsDto.class);
