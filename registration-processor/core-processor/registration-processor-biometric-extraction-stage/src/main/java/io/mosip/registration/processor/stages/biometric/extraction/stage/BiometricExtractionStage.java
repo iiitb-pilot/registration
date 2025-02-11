@@ -204,11 +204,9 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 						registrationId, "After Call of BIOSDK " + (System.currentTimeMillis()-startTime) + " ms");
 
 				if(extractorsDto.getExtractors()!=null && !extractorsDto.getExtractors().isEmpty()) {
-					for(ExtractorDto dto:extractorsDto.getExtractors()) {
-						addBiometricExtractiontoIdRepository(dto,registrationStatusDto.getRegistrationId(), startTime);
-						regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-								registrationId, "Completed Extraction saved into IDrepo " + (System.currentTimeMillis()-startTime) + " ms");
-					}
+					addBiometricExtractiontoIdRepository(extractorsDto.getExtractors(),registrationStatusDto.getRegistrationId(), startTime);
+					regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+							registrationId, "Completed Extraction saved into IDrepo " + (System.currentTimeMillis()-startTime) + " ms");
 				}
 				else {
 					throw new RegistrationProcessorCheckedException(PlatformErrorMessages.RPR_PMS_BIOMETRIC_EXTRACTION_NULL_RESPONSE.getCode(),
@@ -351,28 +349,36 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	/**
 	 * add biometric extractions to id repo
 	 * 
-	 * @param dto
+	 * @param dtoList
 	 * @param registrationId
 	 * @throws ApisResourceAccessException
 	 * @throws IdrepoDraftReprocessableException
 	 * @throws IdrepoDraftException
 	 *
 	 */
-	private IdResponseDTO addBiometricExtractiontoIdRepository(ExtractorDto dto,
+	private IdResponseDTO addBiometricExtractiontoIdRepository(List<ExtractorDto> dtoList,
 			String registrationId, Long startTime)
 			throws ApisResourceAccessException, IdrepoDraftReprocessableException, IdrepoDraftException {
-		String extractionFormat = "";
-		if(dto.getBiometric().equals("iris")) {
-			extractionFormat="irisExtractionFormat";
-		}if(dto.getBiometric().equals("face")) {
-			extractionFormat="faceExtractionFormat";
-		}if(dto.getBiometric().equals("finger")) {
-			extractionFormat="fingerExtractionFormat";
+		List<String> queryParmeter = new ArrayList<>();
+		List<String> queryValue = new ArrayList<>();
+
+		for(ExtractorDto dto : dtoList) {
+			if(dto.getBiometric().equals("iris")) {
+				queryParmeter.add("irisExtractionFormat");
+				queryValue.add(dto.getAttributeName());
+			}if(dto.getBiometric().equals("face")) {
+				queryParmeter.add("faceExtractionFormat");
+				queryValue.add(dto.getAttributeName());
+			}if(dto.getBiometric().equals("finger")) {
+				queryParmeter.add("fingerExtractionFormat");
+				queryValue.add(dto.getAttributeName());
+			}
 		}
+
 		List<String> segments=List.of(registrationId);
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "Before putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
-		IdResponseDTO response= (IdResponseDTO) registrationProcessorRestClientService.putApi(ApiName.IDREPOEXTRACTBIOMETRICS, segments, extractionFormat, dto.getAttributeName(), null, IdResponseDTO.class, null);
+		IdResponseDTO response= (IdResponseDTO) registrationProcessorRestClientService.putApi(ApiName.IDREPOEXTRACTBIOMETRICS, segments, queryParmeter, queryValue, null, IdResponseDTO.class, null);
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "After putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
 		if (response.getErrors() != null && !response.getErrors().isEmpty()) {

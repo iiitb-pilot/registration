@@ -445,6 +445,55 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 		return obj;
 	}
 
+	@Override
+	public Object putApi(ApiName apiName, List<String> pathsegments, List<String> queryParam, List<String> queryParamValue, Object requestedData, Class<?> responseType, MediaType mediaType) throws ApisResourceAccessException {
+
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), "",
+				"RegistrationProcessorRestClientServiceImpl::putApi()::entry");
+		Object obj = null;
+		String apiHostIpPort = env.getProperty(apiName.name());
+		UriComponentsBuilder builder = null;
+		if (apiHostIpPort != null)
+			builder = UriComponentsBuilder.fromUriString(apiHostIpPort);
+		if (builder != null) {
+
+			if (!((pathsegments == null) || (pathsegments.isEmpty()))) {
+				for (String segment : pathsegments) {
+					if (!((segment == null) || (("").equals(segment)))) {
+						builder.pathSegment(segment);
+					}
+				}
+
+			}
+
+			if (!CollectionUtils.isEmpty(queryParam)) {
+				for (int i = 0; i < queryParam.size(); i++) {
+					builder.queryParam(queryParam.get(i), queryParamValue.get(i));
+				}
+			}
+
+			try {
+				Long startTime = System.nanoTime();
+				obj = restApiClient.putApi(builder.toUriString(), requestedData, responseType, mediaType);
+				Long timeDifference = System.nanoTime()-startTime;
+				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "PUT API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
+
+
+			} catch (Exception e) {
+				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
+						LoggerFileConstant.REGISTRATIONID.toString(), "",
+						e.getMessage() + ExceptionUtils.getStackTrace(e));
+
+				throw new ApisResourceAccessException(
+						PlatformErrorMessages.RPR_RCT_UNKNOWN_RESOURCE_EXCEPTION.getMessage(), e);
+			}
+		}
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), "",
+				"RegistrationProcessorRestClientServiceImpl::putApi()::exit");
+		return obj;
+	}
+
+
 	/**
 	 * Check null.
 	 *
