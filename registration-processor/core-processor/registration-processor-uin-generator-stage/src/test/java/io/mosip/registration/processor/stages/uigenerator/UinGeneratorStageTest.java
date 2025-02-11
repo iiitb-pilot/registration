@@ -1469,7 +1469,7 @@ public class UinGeneratorStageTest {
 		MessageDTO messageDTO = new MessageDTO();
 		messageDTO.setRid("27847657360002520181210094052");
 		
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenThrow(exc);
 
 		IdResponseDTO idResponseDTO = new IdResponseDTO();
@@ -1516,7 +1516,7 @@ public class UinGeneratorStageTest {
 		String response = "{\"timestamp\":1553771083721,\"status\":404,\"errors\":[{\"errorCode\":\"KER-UIG-004\",\"errorMessage\":\"Given UIN is not in ISSUED status\"}]}";
 
 		
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenReturn(response);
 
 		IdResponseDTO idResponseDTO = new IdResponseDTO();
@@ -1569,7 +1569,7 @@ public class UinGeneratorStageTest {
 		String response = "{\"timestamp\":1553771083721,\"status\":404,\"errors\":[{\"errorCode\":\"KER-UIG-004\",\"errorMessage\":\"Given UIN is not in ISSUED status\"}]}";
 
 		when(utility.getRegistrationProcessorMappingJson(MappingJsonConstants.IDENTITY)).thenReturn(identityObj);
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenReturn(response);
 
 		IdResponseDTO idResponseDTO = new IdResponseDTO();
@@ -1655,7 +1655,7 @@ public class UinGeneratorStageTest {
 		when(idRepoService.getUinByRid(anyString(), anyString())).thenReturn(null);
 		when(regLostUinDetEntity.getLostUinMatchedRegIdByWorkflowId(any())).thenReturn("27847657360002520181210094052");
 		
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenReturn(response);
 
 		IdResponseDTO idResponseDTO = new IdResponseDTO();
@@ -1689,7 +1689,7 @@ public class UinGeneratorStageTest {
 		String response = "{\"timestamp\":1553771083721,\"status\":404,\"errors\":[{\"errorCode\":\"KER-UIG-004\",\"errorMessage\":\"Given UIN is not in ISSUED status\"}]}";
 
 		
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenReturn(response);
 		when(regLostUinDetEntity.getLostUinMatchedRegIdByWorkflowId(any())).thenReturn("27847657360002520181210094052");
 
@@ -1848,7 +1848,7 @@ public class UinGeneratorStageTest {
 		String response = "{\"timestamp\":1553771083721,\"status\":404,\"errors\":[{\"errorCode\":\"KER-UIG-004\",\"errorMessage\":\"Given UIN is not in ISSUED status\"}]}";
 
 		
-		when(registrationProcessorRestClientService.putApi(any(), any(), any(), any(), any(), any(), any()))
+		when(registrationProcessorRestClientService.putApi(any(), any(), (String) any(), any(), any(), any(), any()))
 				.thenReturn(response);
 
 		IdResponseDTO idResponseDTO = new IdResponseDTO();
