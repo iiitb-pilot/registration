@@ -203,14 +203,14 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 						return;
 					}
 
-//					if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
+					if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 						MessageDTO result = process(messageDTO);
 						addTagsToMessageDTO(result);
-//						updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
+						updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
 						result.setLastHopTimestamp(DateUtils.formatToISOString(DateUtils.getUTCCurrentDateTime()));
-//						result.setTransactionId(UUID.randomUUID().toString());
+						result.setTransactionId(UUID.randomUUID().toString());
 						future.complete(result);
-/*					} else {
+					} else {
 						DuplicateTransactionException duplicateTransactionException = new DuplicateTransactionException("rid: " + messageDTO.getRid() +
 								" TransactionId " + messageDTO.getTransactionId() + " Transaction Flow Id " + messageDTO.getTransactionFlowId());
 						logger.error("{} -- {} {} {}",
@@ -218,7 +218,7 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 								PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getMessage(),duplicateTransactionException.getMessage(), ExceptionUtils.getStackTrace(duplicateTransactionException));
 						future.complete();
 						return;
-					}*/
+					}
 				} catch (Exception e) {
 					logger.error("{} -- {} {} {}",
 						PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
@@ -289,12 +289,12 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 					return;
 				}
 
-//				if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
+				if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 					MessageDTO result = process(messageDTO);
-//					updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
-//					result.setTransactionId(UUID.randomUUID().toString());
+					updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
+					result.setTransactionId(UUID.randomUUID().toString());
 					future.complete(result);
-/*				} else {
+				} else {
 					DuplicateTransactionException duplicateTransactionException = new DuplicateTransactionException("rid: " + messageDTO.getRid() +
 							" TransactionId " + messageDTO.getTransactionId() + " Transaction Flow Id " + messageDTO.getTransactionFlowId());
 					logger.error("{} -- {} {} {}",
@@ -302,7 +302,7 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 							PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getMessage(),duplicateTransactionException.getMessage(), ExceptionUtils.getStackTrace(duplicateTransactionException));
 					future.complete();
 					return;
-				}*/
+				}
 				} catch (Exception e) {
 					logger.error("{} -- {} {} {}",
 						PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
