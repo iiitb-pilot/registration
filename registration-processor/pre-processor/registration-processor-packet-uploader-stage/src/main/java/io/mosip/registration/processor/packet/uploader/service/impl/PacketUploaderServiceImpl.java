@@ -194,17 +194,22 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
         regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
                 registrationId, "PacketUploaderServiceImpl::validateAndUploadPacket()::entry");
         SyncRegistrationEntity regEntity = null;
+        Long startTime = System.currentTimeMillis();
 
         try {
         regEntity = syncRegistrationService.findByWorkflowInstanceId(messageDTO.getWorkflowInstanceId());
+            regProcLogger.info("THAM - PacketUpload - Find Registration Entity for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
             dto = registrationStatusService.getRegistrationStatus(
                     registrationId, messageDTO.getReg_type(), messageDTO.getIteration(), regEntity.getWorkflowInstanceId());
+            regProcLogger.info("THAM - PacketUpload - Find Registration status for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
                     registrationId, "PacketUploaderServiceImpl::validateAndUploadPacket():: Flow Id" + dto.getLatestTransactionFlowId());
                 dto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.UPLOAD_PACKET.toString());
                 dto.setRegistrationStageName(stageName);
 
                 final byte[] encryptedByteArray = getPakcetFromDMZ(regEntity.getPacketId(),registrationId);
+            regProcLogger.info("THAM - PacketUpload - Get Packet from DMZ for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                 if (encryptedByteArray != null) {
 
@@ -214,15 +219,24 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                                 registrationId,
                                 utility.getRefId(registrationId, regEntity.getReferenceId()),
                                 new ByteArrayInputStream(encryptedByteArray));
+                        regProcLogger.info("THAM - PacketUpload - Performing Decryption for packet for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
                         final byte[] decryptedPacketBytes = IOUtils.toByteArray(decryptedPacket);
+                        Map<String, InputStream> fileMap = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
+                        regProcLogger.info("THAM - PacketUpload - Unzip and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
                         if (scanFile(encryptedByteArray, registrationId,
-                                regEntity.getReferenceId(), ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(
-                                        decryptedPacketBytes)), dto, description, messageDTO)) {
+                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO)) {
+                            regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
                             int retrycount = (dto.getRetryCount() == null) ? 0 : dto.getRetryCount() + 1;
                             dto.setRetryCount(retrycount);
                             if (retrycount < getMaxRetryCount()) {
+                                Map<String, InputStream> fileMap1 = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
+                                regProcLogger.info("THAM - PacketUpload - Unzip 2nd Time and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                                messageDTO = uploadPacket(regEntity, dto, fileMap1, messageDTO, description);
+                                regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-                                messageDTO = uploadPacket(regEntity, dto, ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes)), messageDTO, description);
                                 if (messageDTO.getIsValid()) {
                                     dto.setLatestTransactionStatusCode(
                                             RegistrationTransactionStatusCode.SUCCESS.toString());
