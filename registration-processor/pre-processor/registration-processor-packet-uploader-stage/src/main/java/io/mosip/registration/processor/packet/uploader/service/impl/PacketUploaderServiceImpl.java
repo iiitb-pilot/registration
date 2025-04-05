@@ -425,7 +425,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
             InputStream packet = new ByteArrayInputStream(input);
             // scanning the top level packet
             isInputFileClean = virusScannerService.scanFile(packet);
-            regProcLogger.info("THAM - PacketUpload - Scanning first File for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+            regProcLogger.info("THAM - PacketUpload - Scanning first File for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
             if (isInputFileClean) {
                 // scanning the source packets (Like - id, evidence, optional packets).
@@ -433,18 +433,18 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                     if (source.getKey().endsWith(ZIP)) {
                         InputStream decryptedData = decryptor
                                 .decrypt(id, utility.getRefId(id, refId), source.getValue());
-                        regProcLogger.info("THAM - PacketUpload - Decrypting sub zip file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                        regProcLogger.info("THAM - PacketUpload - Decrypting sub zip file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                         long startTime1 = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(decryptedData);
-                        regProcLogger.info("THAM - PacketUpload - Scanning  sub zip file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                        regProcLogger.info("THAM - PacketUpload - Scanning  sub zip file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
                                 LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan ZIP file " + (System.currentTimeMillis() - startTime1) + " (ms)");
                     } else {
                         long startTime1 = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(source.getValue());
-                        regProcLogger.info("THAM - PacketUpload - Scanning  sub json file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                        regProcLogger.info("THAM - PacketUpload - Scanning  sub json file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
                         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
                                 LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan JSON file " + (System.currentTimeMillis() - startTime1) + " (ms)");
                     }
