@@ -226,7 +226,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                         regProcLogger.info("THAM - PacketUpload - Unzip and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                         if (scanFile(encryptedByteArray, registrationId,
-                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO)) {
+                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO, startTime)) {
                             regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                             int retrycount = (dto.getRetryCount() == null) ? 0 : dto.getRetryCount() + 1;
@@ -419,12 +419,13 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
      * @throws ApisResourceAccessException
      */
     private boolean scanFile(final byte[] input, String id, String refId, final Map<String, InputStream> sourcePackets, InternalRegistrationStatusDto dto,
-                             LogDescription description, MessageDTO messageDTO) throws ApisResourceAccessException, PacketDecryptionFailureException {
+                             LogDescription description, MessageDTO messageDTO, Long startTime) throws ApisResourceAccessException, PacketDecryptionFailureException {
         boolean isInputFileClean = false;
         try {
             InputStream packet = new ByteArrayInputStream(input);
             // scanning the top level packet
             isInputFileClean = virusScannerService.scanFile(packet);
+            regProcLogger.info("THAM - PacketUpload - Scanning first File for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
             if (isInputFileClean) {
                 // scanning the source packets (Like - id, evidence, optional packets).
@@ -432,15 +433,20 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                     if (source.getKey().endsWith(ZIP)) {
                         InputStream decryptedData = decryptor
                                 .decrypt(id, utility.getRefId(id, refId), source.getValue());
-                        long startTime = System.currentTimeMillis();
+                        regProcLogger.info("THAM - PacketUpload - Decrypting sub zip file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
+                        long startTime1 = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(decryptedData);
+                        regProcLogger.info("THAM - PacketUpload - Scanning  sub zip file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
                         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan ZIP file " + (System.currentTimeMillis() - startTime) + " (ms)");
+                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan ZIP file " + (System.currentTimeMillis() - startTime1) + " (ms)");
                     } else {
-                        long startTime = System.currentTimeMillis();
+                        long startTime1 = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(source.getValue());
+                        regProcLogger.info("THAM - PacketUpload - Scanning  sub json file for RID : " + refId + " in " + (System.currentTimeMillis()-startTime) + " ms");
                         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan JSON file " + (System.currentTimeMillis() - startTime) + " (ms)");
+                                LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan JSON file " + (System.currentTimeMillis() - startTime1) + " (ms)");
                     }
                     if (!isInputFileClean)
                         break;
