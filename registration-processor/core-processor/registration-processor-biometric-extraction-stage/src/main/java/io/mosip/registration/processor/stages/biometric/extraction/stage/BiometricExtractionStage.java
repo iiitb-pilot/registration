@@ -167,8 +167,6 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 		InternalRegistrationStatusDto registrationStatusDto=null;
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "BiometricExtractionStage::process()::entry");
-		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-				registrationId, "Before Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
 			try {
 		registrationStatusDto = registrationStatusService.getRegistrationStatus(
 				registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
@@ -176,7 +174,7 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 					.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.BIOMETRIC_EXTRACTION.toString());
 			registrationStatusDto.setRegistrationStageName(getStageName());
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationId, "After Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
+						registrationId, "THAM - BIOEXTRACTION - After Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
 
 			if(!idrepoDraftService.idrepoHasDraft(registrationStatusDto.getRegistrationId())) {
 				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());

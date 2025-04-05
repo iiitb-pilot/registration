@@ -207,7 +207,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                     registrationId, "PacketUploaderServiceImpl::validateAndUploadPacket():: Flow Id" + dto.getLatestTransactionFlowId());
                 dto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.UPLOAD_PACKET.toString());
                 dto.setRegistrationStageName(stageName);
-
+                startTime = System.currentTimeMillis();
                 final byte[] encryptedByteArray = getPakcetFromDMZ(regEntity.getPacketId(),registrationId);
             regProcLogger.info("THAM - PacketUpload - Get Packet from DMZ for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
@@ -226,7 +226,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                         regProcLogger.info("THAM - PacketUpload - Unzip and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                         if (scanFile(encryptedByteArray, registrationId,
-                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO, startTime)) {
+                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO)) {
                             regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                             int retrycount = (dto.getRetryCount() == null) ? 0 : dto.getRetryCount() + 1;
@@ -419,11 +419,12 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
      * @throws ApisResourceAccessException
      */
     private boolean scanFile(final byte[] input, String id, String refId, final Map<String, InputStream> sourcePackets, InternalRegistrationStatusDto dto,
-                             LogDescription description, MessageDTO messageDTO, Long startTime) throws ApisResourceAccessException, PacketDecryptionFailureException {
+                             LogDescription description, MessageDTO messageDTO) throws ApisResourceAccessException, PacketDecryptionFailureException {
         boolean isInputFileClean = false;
         try {
             InputStream packet = new ByteArrayInputStream(input);
             // scanning the top level packet
+            Long startTime = System.currentTimeMillis();
             isInputFileClean = virusScannerService.scanFile(packet);
             regProcLogger.info("THAM - PacketUpload - Scanning first File for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
@@ -431,11 +432,13 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                 // scanning the source packets (Like - id, evidence, optional packets).
                 for (final Map.Entry<String, InputStream> source : sourcePackets.entrySet()) {
                     if (source.getKey().endsWith(ZIP)) {
+                        startTime = System.currentTimeMillis();
                         InputStream decryptedData = decryptor
                                 .decrypt(id, utility.getRefId(id, refId), source.getValue());
                         regProcLogger.info("THAM - PacketUpload - Decrypting sub zip file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
                         long startTime1 = System.currentTimeMillis();
+                        startTime = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(decryptedData);
                         regProcLogger.info("THAM - PacketUpload - Scanning  sub zip file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
@@ -443,6 +446,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                                 LoggerFileConstant.REGISTRATIONID.toString(), id, "Time taken to scan ZIP file " + (System.currentTimeMillis() - startTime1) + " (ms)");
                     } else {
                         long startTime1 = System.currentTimeMillis();
+                        startTime = System.currentTimeMillis();
                         isInputFileClean = virusScannerService.scanFile(source.getValue());
                         regProcLogger.info("THAM - PacketUpload - Scanning  sub json file for RID : " + id + " in " + (System.currentTimeMillis()-startTime) + " ms");
                         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
