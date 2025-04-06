@@ -191,12 +191,16 @@ public class CredentialRequestorStage extends MosipVerticleAPIManager {
 		ResponseWrapper<?> responseWrapper = null;
 		CredentialResponseDto credentialResponseDto;
 			try {
-			registrationStatusDto = registrationStatusService.getRegistrationStatus(
+				Long startTime1 = System.currentTimeMillis();
+
+				registrationStatusDto = registrationStatusService.getRegistrationStatus(
 					regId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
 				registrationStatusDto
 						.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.PRINT_SERVICE.toString());
 				registrationStatusDto.setRegistrationStageName(getStageName());
+				Long startTime = System.currentTimeMillis();
 				JSONObject jsonObject = utilities.idrepoRetrieveIdentityByRid(regId);
+				regProcLogger.info("THAM - CredentialRequestStage - Downloading ID Details from ID REPO for RID : " + regId + " " + (System.currentTimeMillis()-startTime) + " ms");
 				uin = JsonUtil.getJSONValue(jsonObject, IdType.UIN.toString());
 				if (uin == null) {
 					regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
@@ -219,7 +223,10 @@ public class CredentialRequestorStage extends MosipVerticleAPIManager {
 					requestWrapper.setId(env.getProperty("mosip.registration.processor.credential.request.service.id"));
 					DateTimeFormatter format = DateTimeFormatter.ofPattern(env.getProperty(DATETIME_PATTERN));
 					requestWrapper.setVersion("1.0");
+					startTime = System.currentTimeMillis();
 					List<CredentialPartner> allIssuerList = credentialPartnerUtil.getAllCredentialPartners().getPartners();
+					regProcLogger.info("THAM - CredentialRequestStage - Get All Credentials Partner for RID : " + regId + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 					// filtering with default partner ids and process
 					List<CredentialPartner> filteredPartners = allIssuerList.stream()
 							.filter(issuer -> defaultPartners.contains(issuer.getId()))
@@ -233,6 +240,7 @@ public class CredentialRequestorStage extends MosipVerticleAPIManager {
 								DateUtils.getUTCCurrentDateTimeString(env.getProperty(DATETIME_PATTERN)), format);
 						requestWrapper.setRequesttime(localdatetime);
 						requestWrapper.setRequest(credentialRequestDto);
+						startTime = System.currentTimeMillis();
 						// issuers with appIdBasedCredentialIdSuffix is calling v1 api and for others stage is calling v2 api for credential
 						if (StringUtils.isNotEmpty(key.getAppIdBasedCredentialIdSuffix())) {
 							List<String> pathsegments = new ArrayList<>();
@@ -243,6 +251,8 @@ public class CredentialRequestorStage extends MosipVerticleAPIManager {
 							responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.CREDENTIALREQUEST, null, null,
 									requestWrapper, ResponseWrapper.class, MediaType.APPLICATION_JSON);
 						}
+						regProcLogger.info("THAM - CredentialRequestStage - Insert Credentials for RID : " + regId + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 						if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
 							ErrorDTO error = responseWrapper.getErrors().get(0);
 							object.setIsValid(Boolean.FALSE);
@@ -282,6 +292,7 @@ public class CredentialRequestorStage extends MosipVerticleAPIManager {
 						regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
 								LoggerFileConstant.REGISTRATIONID.toString(), regId, "PrintStage::process()::exit");
 					}
+					regProcLogger.info("THAM - CredentialRequestStage - Completed Credentials for RID : " + regId + " " + (System.currentTimeMillis()-startTime1) + " ms");
 				}
 			} catch (ApisResourceAccessException e) {
 				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
