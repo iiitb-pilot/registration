@@ -181,6 +181,7 @@ public class WorkflowInternalActionVerticle extends MosipVerticleAPIManager {
 		boolean isTransactionSuccessful = false;
 		WorkflowInternalActionDTO workflowInternalActionDTO = (WorkflowInternalActionDTO) object;
 		String registrationId = workflowInternalActionDTO.getRid();
+		Long startTime = System.currentTimeMillis();
 		regProcLogger.debug("WorkflowInternalActionVerticle called for registration id {}", registrationId);
 		WorkflowInternalActionCode workflowInternalActionCode = null;
 		try {
@@ -223,7 +224,7 @@ public class WorkflowInternalActionVerticle extends MosipVerticleAPIManager {
 			description.setMessage(PlatformSuccessMessages.RPR_WORKFLOW_INTERNAL_ACTION_SUCCESS.getMessage());
 			description.setCode(PlatformSuccessMessages.RPR_WORKFLOW_INTERNAL_ACTION_SUCCESS.getCode());
 			regProcLogger.debug("WorkflowInternalActionVerticle call ended for registration id {}", registrationId);
-
+			regProcLogger.info("THAM - WorkFlowAction - Completed Action for RID : " + registrationId + " " + workflowInternalActionDTO.getActionCode() + " " + (System.currentTimeMillis() - startTime) + " ms");
 		} catch (DateTimeParseException e) {
 			updateDTOsAndLogError(description, registrationId, PlatformErrorMessages.RPR_WIA_DATE_TIME_EXCEPTION, e);
 
