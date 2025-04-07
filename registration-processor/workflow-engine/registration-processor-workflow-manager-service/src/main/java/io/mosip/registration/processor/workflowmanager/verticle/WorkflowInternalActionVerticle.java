@@ -262,28 +262,54 @@ public class WorkflowInternalActionVerticle extends MosipVerticleAPIManager {
 		String registrationType = workflowInternalActionDTO.getReg_type();
 
 		regProcLogger.info("processAnonymousProfile called for registration id {}", registrationId);
-
+		Long startTime = System.currentTimeMillis();
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService.getRegistrationStatus(
 				registrationId, registrationType, workflowInternalActionDTO.getIteration(),
 				workflowInternalActionDTO.getWorkflowInstanceId());
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching Registration status for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
 		JSONObject regProcessorIdentityJson = utility.getRegistrationProcessorMappingJson(MappingJsonConstants.IDENTITY);
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching Identity Mapping for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 		String idSchemaVersionValue = JsonUtil.getJSONValue(JsonUtil.getJSONObject(regProcessorIdentityJson, MappingJsonConstants.IDSCHEMA_VERSION), MappingJsonConstants.VALUE);
+		startTime = System.currentTimeMillis();
 		String schemaVersion = packetManagerService.getFieldByMappingJsonKey(registrationId,
 				idSchemaVersionValue, registrationType, ProviderStageName.WORKFLOW_MANAGER);
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching IDSchema Version for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		Map<String,String> fieldTypeMap = idSchemaUtil.getIdSchemaFieldTypes(
 				Double.parseDouble(schemaVersion));
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching IDSchema Version field type for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		Map<String, String> fieldMap = packetManagerService.getFields(registrationId,
 				idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationType,
 				ProviderStageName.WORKFLOW_MANAGER);
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching IDSchema Version from Packet Manager for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		Map<String, String> metaInfoMap = packetManagerService.getMetaInfo(registrationId, registrationType,
 				ProviderStageName.WORKFLOW_MANAGER);
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching MetaInfo for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		BiometricRecord biometricRecord = packetManagerService.getBiometrics(registrationId,
 				MappingJsonConstants.INDIVIDUAL_BIOMETRICS, registrationType, ProviderStageName.WORKFLOW_MANAGER);
+		regProcLogger.info("THAM - processAnonymousProfile - Fetching Biometrics for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		json = anonymousProfileService.buildJsonStringFromPacketInfo(biometricRecord, fieldMap, fieldTypeMap,
 				metaInfoMap, registrationStatusDto.getStatusCode(), registrationStatusDto.getRegistrationStageName());
+		regProcLogger.info("THAM - processAnonymousProfile - buildJsonStringFromPacketInfo for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		anonymousProfileService.saveAnonymousProfile(registrationId, registrationStatusDto.getRegistrationStageName(), json);
-		
+		regProcLogger.info("THAM - processAnonymousProfile - saveAnonymousProfile " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
+
 		this.send(this.mosipEventBus, new MessageBusAddress(anonymousProfileBusAddress), workflowInternalActionDTO);
+		regProcLogger.info("THAM - processAnonymousProfile - Sending Message to profile for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
 
 		regProcLogger.info("processAnonymousProfile ended for registration id {}", registrationId);
 	}
@@ -379,32 +405,52 @@ public class WorkflowInternalActionVerticle extends MosipVerticleAPIManager {
 	private void processCompleteAsProcessed(WorkflowInternalActionDTO workflowInternalActionDTO)
 			throws ApisResourceAccessException, PacketManagerException, JsonProcessingException, IOException,
 			WorkflowActionException {
+		Long startTime = System.currentTimeMillis();
 		AdditionalInfoRequestDto additionalInfoRequestDto = additionalInfoRequestService
 				.getAdditionalInfoRequestByRegIdAndProcessAndIteration(workflowInternalActionDTO.getRid(),
 						workflowInternalActionDTO.getReg_type(), workflowInternalActionDTO.getIteration());
+		regProcLogger.info("THAM - processCompleteAsProcessed - Fetching Additional info for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+		startTime = System.currentTimeMillis();
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService
 			.getRegistrationStatus(workflowInternalActionDTO.getRid(), workflowInternalActionDTO.getReg_type(),
 				workflowInternalActionDTO.getIteration(), workflowInternalActionDTO.getWorkflowInstanceId());
+		regProcLogger.info("THAM - processCompleteAsProcessed - Fetching Registration Status for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 		registrationStatusDto.setStatusComment(workflowInternalActionDTO.getActionMessage());
 		registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSED.toString());
 		registrationStatusDto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.INTERNAL_WORKFLOW_ACTION.toString());
 		registrationStatusDto.setSubStatusCode(StatusUtil.WORKFLOW_INTERNAL_ACTION_SUCCESS.getCode());
+		startTime = System.currentTimeMillis();
 		registrationStatusService.updateRegistrationStatusForWorkflowEngine(registrationStatusDto, MODULE_ID, MODULE_NAME);
+		regProcLogger.info("THAM - processCompleteAsProcessed - Updating Registration Status for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 		if (additionalInfoRequestDto != null) {
 			Map<String, String> tags = new HashMap<String, String>();
 			tags.put(workflowInternalActionDTO.getReg_type() + "_FLOW_STATUS",
 					RegistrationStatusCode.PROCESSED.toString());
+			startTime = System.currentTimeMillis();
 			packetManagerService.addOrUpdateTags(workflowInternalActionDTO.getRid(), tags);
+			regProcLogger.info("THAM - processCompleteAsProcessed - addOrUpdateTags for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
+			startTime = System.currentTimeMillis();
 			InternalRegistrationStatusDto mainFlowregistrationStatusDto = registrationStatusService
 					.getRegistrationStatus(null, null, null, additionalInfoRequestDto.getWorkflowInstanceId());
+			regProcLogger.info("THAM - processCompleteAsProcessed - Fetching Internal Registration Status for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 			mainFlowregistrationStatusDto
 					.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.REPROCESS.toString());
 			List<InternalRegistrationStatusDto> internalRegistrationStatusDtos = new ArrayList<InternalRegistrationStatusDto>();
 			internalRegistrationStatusDtos.add(mainFlowregistrationStatusDto);
+			startTime = System.currentTimeMillis();
 			workflowActionService.processWorkflowAction(internalRegistrationStatusDtos,
 					WorkflowActionCode.RESUME_PROCESSING.toString());
+			regProcLogger.info("THAM - processCompleteAsProcessed - processWorkflowAction for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 		} else {
+			startTime = System.currentTimeMillis();
 			sendWorkflowCompletedWebSubEvent(registrationStatusDto);
+			regProcLogger.info("THAM - processCompleteAsProcessed - sendWorkflowCompletedWebSubEvent for RID " + workflowInternalActionDTO.getRid() + " " + (System.currentTimeMillis()-startTime) + " ms");
+
 		}
 
 	}
