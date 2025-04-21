@@ -132,6 +132,12 @@ public class PacketValidateProcessor {
 	public static final String REJECTED = "REJECTED";
 
 	/**
+	 * The Constant PENDING.
+	 */
+
+	public static final String PENDING = "PENDING";
+
+	/**
 	 * The registration status service.
 	 */
 	@Autowired
@@ -487,7 +493,10 @@ public class PacketValidateProcessor {
 			if (regEntity.getSupervisorStatus().equalsIgnoreCase(APPROVED)) {
 				return true;
 
-			} else if (regEntity.getSupervisorStatus().equalsIgnoreCase(REJECTED)) {
+			} else if (regEntity.getSupervisorStatus().equalsIgnoreCase(PENDING)) {
+				return true;
+			}
+			else if (regEntity.getSupervisorStatus().equalsIgnoreCase(REJECTED)) {
 				return false;
 			}
 			return false;
