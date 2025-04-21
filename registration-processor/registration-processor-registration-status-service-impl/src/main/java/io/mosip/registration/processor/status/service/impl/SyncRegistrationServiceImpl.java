@@ -396,7 +396,8 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 			return true;
 		} else if (SupervisorStatus.REJECTED.toString().equals(value)) {
 			return true;
-
+		}else if(SupervisorStatus.PENDING.toString().equals(value)){
+            return true;
 		} else {
 			SyncResponseFailureDto syncResponseFailureDto = new SyncResponseFailureDto();
 			syncResponseFailureDto.setRegistrationId(registrationDto.getRegistrationId());

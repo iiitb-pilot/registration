@@ -8,5 +8,7 @@ public enum SupervisorStatus {
 	/** The approved. */
 	APPROVED,
 	/** The reject. */
-	REJECTED
+	REJECTED,
+	/** The pending. */
+	PENDING
 }
