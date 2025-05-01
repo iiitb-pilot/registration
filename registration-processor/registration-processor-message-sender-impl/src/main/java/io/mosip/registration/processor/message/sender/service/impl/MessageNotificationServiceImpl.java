@@ -155,6 +155,10 @@ public class MessageNotificationServiceImpl
 	@Value("${mosip.default.user-preferred-language-attribute:#{null}}")
 	private String userPreferredLanguageAttribute;
 
+	/** Identity fields not required to include in notification attribute list */
+	@Value("#{'${mosip.regproc.identity-fields.not-required.notification:selectedHandles}'.split(',')}")
+	private List<String> excludedFields;
+
 	/** The resclient. */
 	@Autowired
 	private RestApiClient resclient;
@@ -550,6 +554,8 @@ public class MessageNotificationServiceImpl
 		   mapperJsonKeys = new ArrayList<>(mapperIdentity.keySet());
         }
 		for (String key : mapperJsonKeys) {
+			if (excludedFields.contains(key))
+				continue;
 			JSONObject jsonValue = JsonUtil.getJSONObject(mapperIdentity, key);
 			if (jsonValue.get(VALUE) != null && !jsonValue.get(VALUE).toString().isBlank()) {
 				String[] valueArray = jsonValue.get(VALUE).toString().split(",");
@@ -618,6 +624,8 @@ public class MessageNotificationServiceImpl
 		}
 		List<String> mapperJsonValues = new ArrayList<>();
 		for (String key : mapperJsonKeys) {
+			if (excludedFields.contains(key))
+				continue;
 			JSONObject jsonValue = JsonUtil.getJSONObject(mapperIdentity, key);
 			if (jsonValue.get(VALUE) != null && !jsonValue.get(VALUE).toString().isBlank()) {
 				String[] valueArray = jsonValue.get(VALUE).toString().split(",");
