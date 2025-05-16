@@ -80,7 +80,7 @@ public class KafkaMosipEventBus implements MosipEventBus {
 	 * @param eventTracingHandler
 	 */
 	public KafkaMosipEventBus(Vertx vertx, String bootstrapServers, String groupId,
-			String commitType, String maxPollRecords, int pollFrequency, EventTracingHandler eventTracingHandler) {
+			String commitType, String maxPollRecords, String maxPollinterval, int pollFrequency, EventTracingHandler eventTracingHandler) {
 
 		validateCommitType(commitType);
 		this.vertx = vertx;
@@ -97,6 +97,7 @@ public class KafkaMosipEventBus implements MosipEventBus {
 		consumerConfig.put("group.id", groupId);
 		consumerConfig.put("auto.offset.reset", "latest");
 		consumerConfig.put("max.poll.records", maxPollRecords);
+		consumerConfig.put("max.poll.interval.ms", maxPollinterval);
 		if (commitType.equals("auto"))
 			consumerConfig.put("enable.auto.commit", "true");
 		else
@@ -112,8 +113,8 @@ public class KafkaMosipEventBus implements MosipEventBus {
 		producerConfig.put("acks", "1");
 		this.kafkaProducer = KafkaProducer.create(vertx, producerConfig);
 
-		logger.info("KafkaMosipEventBus loaded with configuration: bootstrapServers: {} groupId: {} commitType: {}",
-				bootstrapServers , groupId , commitType);
+		logger.info("KafkaMosipEventBus loaded with configuration: bootstrapServers: {} groupId: {} commitType: {} maxPollInterval: {}",
+				bootstrapServers , groupId , commitType, maxPollinterval);
 	}
 
 	/*

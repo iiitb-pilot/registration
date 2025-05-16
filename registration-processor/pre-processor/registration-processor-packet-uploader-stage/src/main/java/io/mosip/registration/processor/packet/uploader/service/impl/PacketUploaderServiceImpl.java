@@ -537,7 +537,9 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
         String registrationId = dto.getRegistrationId();
         // upload packets
         try {
+            Long startTime1 = System.currentTimeMillis();
             for (Map.Entry<String, InputStream> entry : sourcePackets.entrySet()) {
+                Long startTime = System.currentTimeMillis();
                 if (entry.getKey().endsWith(ZIP)) {
                     String objStoreKey = isIterationAdditionEnabled ?
                             getFinalKey(regEntity, entry.getKey().replace(ZIP, ""), object)
@@ -545,6 +547,9 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                             entry.getKey().replace(ZIP, "");
                     boolean result = objectStoreAdapter.putObject(packetManagerAccount, registrationId,
                             null, null, objStoreKey, entry.getValue());
+                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                            LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+                            "THAM - File Uploaded " + objStoreKey + " in " +  (System.currentTimeMillis() - startTime));
                     if (!result)
                         throw new ObjectStoreNotAccessibleException("Failed to store packet : " + entry.getKey());
                 }
@@ -552,6 +557,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
 
             // upload metadata
             for (Map.Entry<String, InputStream> entry : sourcePackets.entrySet()) {
+                Long startTime = System.currentTimeMillis();
                 if (entry.getKey().endsWith(JSON)) {
                     byte[] bytearray = IOUtils.toByteArray(entry.getValue());
                     String jsonString = new String(bytearray);
@@ -562,8 +568,15 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                             entry.getKey().replace(JSON, "");
                     objectStoreAdapter.addObjectMetaData(packetManagerAccount, registrationId,
                             null, null, objStoreKey, currentIdMap);
+                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                            LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+                            "THAM - addObjectMetaData " + objStoreKey + " in " +  (System.currentTimeMillis() - startTime));
                 }
             }
+
+            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                    LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+                    "THAM - Total Time to Complete Upload " + (System.currentTimeMillis() - startTime1));
         } catch (Exception e) {
             object.setIsValid(false);
             object.setInternalError(true);
