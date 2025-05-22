@@ -213,7 +213,7 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 						return;
 					}
 
-					if(isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
+					if(!isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
 //					if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 						MessageDTO result = process(messageDTO);
 						addTagsToMessageDTO(result);
@@ -309,7 +309,7 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 					return;
 				}
 
-				if(isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
+				if(!isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
 //				if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 					MessageDTO result = process(messageDTO);
 //					updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
