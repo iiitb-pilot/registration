@@ -68,6 +68,8 @@ public class KafkaMosipEventBus implements MosipEventBus {
 
 	private EventTracingHandler eventTracingHandler;
 
+	private final Cache<String, String> cache;
+
 	/**
 	 * Instantiates a new kafka mosip event bus.
 	 *
@@ -86,6 +88,10 @@ public class KafkaMosipEventBus implements MosipEventBus {
 			String commitType, String maxPollRecords, String maxPollinterval, int pollFrequency, EventTracingHandler eventTracingHandler) {
 
 		validateCommitType(commitType);
+		this.cache = Caffeine.newBuilder()
+				.expireAfterWrite(15, TimeUnit.MINUTES)
+				.maximumSize(100000) // optional: set a size limit
+				.build();
 		this.vertx = vertx;
 		this.commitType = commitType;
 		this.pollFrequency = pollFrequency;
@@ -266,7 +272,7 @@ public class KafkaMosipEventBus implements MosipEventBus {
 					.mapToObj(consumerRecords::recordAt)
 						.filter(record -> {
 							String key = record.key();
-							if (key != null) {
+							if (key != null && isCacheExist(key)) {
 								logger.error("Duplicate record with key '{}' found. Skipping processing.", key);
 								return false;
 							}
@@ -480,5 +486,45 @@ public class KafkaMosipEventBus implements MosipEventBus {
 			healthCheckDTO.setFailureReason("Failed kafkaProducer");
 		}
 		eventHandler.handle(healthCheckDTO);
+	}
+
+	/**
+	 * Adds a string to the cache with a specific key.
+	 *
+	 * @param key   The key for the cache entry.
+	 * @param value The string value to be cached.
+	 */
+	public void addToCache(String key, String value) {
+		cache.put(key, value);
+	}
+
+	/**
+	 * Gets a value from the cache by key.
+	 *
+	 * @param key The key to retrieve.
+	 * @return The cached string or null if not present or expired.
+	 */
+	public String getFromCache(String key) {
+		return cache.getIfPresent(key);
+	}
+
+	/**
+	 * Removes a key from the cache immediately.
+	 *
+	 * @param key The key to remove.
+	 */
+	public void removeFromCache(String key) {
+		cache.invalidate(key);
+	}
+
+	public boolean isCacheExist(String rid) {
+		String val = getFromCache(rid);
+		if(val != null) {
+			logger.info("Caffine Cache Value is " + val);
+			return true;
+		} else {
+			addToCache(rid, "1");
+			return false;
+		}
 	}
 }

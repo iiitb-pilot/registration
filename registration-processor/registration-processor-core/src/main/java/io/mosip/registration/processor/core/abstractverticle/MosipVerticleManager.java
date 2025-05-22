@@ -11,14 +11,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import io.mosip.registration.processor.core.code.RegistrationTransactionStatusCode;
 import io.mosip.registration.processor.core.exception.*;
 import io.mosip.registration.processor.core.tracker.dto.TrackRequestDto;
 import io.mosip.registration.processor.core.tracker.dto.TrackResponseDto;
-import org.apache.camel.com.github.benmanes.caffeine.cache.Cache;
-import org.apache.camel.com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,8 +108,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 
 	protected MosipEventBus mosipEventBus;
 
-	private Cache<String, String> cache;
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -149,11 +144,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 		} catch (UnknownHostException e1) {
 			throw new DeploymentFailureException(PlatformErrorMessages.RPR_CMB_MALFORMED_URL_EXCEPTION.getMessage());
 		}
-
-		this.cache = Caffeine.newBuilder()
-				.expireAfterWrite(15, TimeUnit.MINUTES)
-				.maximumSize(100000) // optional: set a size limit
-				.build();
 
 		MicrometerMetricsOptions micrometerMetricsOptions = new MicrometerMetricsOptions()
 				.setPrometheusOptions(new VertxPrometheusOptions()
@@ -213,7 +203,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 						return;
 					}
 
-					if(!isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
 //					if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 						MessageDTO result = process(messageDTO);
 						addTagsToMessageDTO(result);
@@ -230,15 +219,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 						future.complete();
 						return;
 					}*/
-					} else {
-						DuplicateTransactionException duplicateTransactionException = new DuplicateTransactionException("rid: " + messageDTO.getRid() +
-								" TransactionId " + messageDTO.getTransactionId() + " Transaction Flow Id " + messageDTO.getTransactionFlowId());
-						logger.error("{} -- {} {} {}",
-								PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
-								PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getMessage(),duplicateTransactionException.getMessage(), ExceptionUtils.getStackTrace(duplicateTransactionException));
-						future.complete();
-						return;
-					}
 				} catch (Exception e) {
 					logger.error("{} -- {} {} {}",
 						PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
@@ -309,7 +289,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 					return;
 				}
 
-				if(!isCacheExist(messageDTO.getTransactionFlowId() + "_" + messageDTO.getTransactionId() + "_" + messageDTO.getRid())) {
 //				if(isTransactionAllowed(messageDTO.getTransactionFlowId(), messageDTO.getTransactionId(), messageDTO.getRid())) {
 					MessageDTO result = process(messageDTO);
 //					updateTransactionStatus(messageDTO.getTransactionId(), ((messageDTO.getIsValid() && !messageDTO.getInternalError()) ? RegistrationTransactionStatusCode.PROCESSED.toString() : RegistrationTransactionStatusCode.FAILED.toString()));
@@ -324,15 +303,6 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 					future.complete();
 					return;
 				}*/
-				} else {
-					DuplicateTransactionException duplicateTransactionException = new DuplicateTransactionException("rid: " + messageDTO.getRid() +
-							" TransactionId " + messageDTO.getTransactionId() + " Transaction Flow Id " + messageDTO.getTransactionFlowId());
-					logger.error("{} -- {} {} {}",
-							PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
-							PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getMessage(),duplicateTransactionException.getMessage(), ExceptionUtils.getStackTrace(duplicateTransactionException));
-					future.complete();
-					return;
-				}
 				} catch (Exception e) {
 					logger.error("{} -- {} {} {}",
 						PlatformErrorMessages.RPR_SYS_STAGE_PROCESSING_FAILED.getCode(),
@@ -482,43 +452,4 @@ public abstract class MosipVerticleManager extends AbstractVerticle
 
 	protected abstract String getPropertyPrefix();
 
-	/**
-	 * Adds a string to the cache with a specific key.
-	 *
-	 * @param key   The key for the cache entry.
-	 * @param value The string value to be cached.
-	 */
-	public void addToCache(String key, String value) {
-		cache.put(key, value);
-	}
-
-	/**
-	 * Gets a value from the cache by key.
-	 *
-	 * @param key The key to retrieve.
-	 * @return The cached string or null if not present or expired.
-	 */
-	public String getFromCache(String key) {
-		return cache.getIfPresent(key);
-	}
-
-	/**
-	 * Removes a key from the cache immediately.
-	 *
-	 * @param key The key to remove.
-	 */
-	public void removeFromCache(String key) {
-		cache.invalidate(key);
-	}
-
-	public boolean isCacheExist(String rid) {
-		String val = getFromCache(rid);
-		if(val != null) {
-			logger.info("Caffine Cache Value is " + val);
-			return true;
-		} else {
-			addToCache(rid, "1");
-			return false;
-		}
-	}
 }
