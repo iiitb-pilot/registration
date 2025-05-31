@@ -91,7 +91,7 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	private Long messageExpiryTimeLimit;
 	
 	/** worker pool size. */
-	@Value("${biometric.extraction.worker.pool.size:20}")
+	@Value("${worker.pool.size}")
 	private Integer workerPoolSize;
 	
 	/**partner policy ids */
@@ -357,19 +357,24 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	private IdResponseDTO addBiometricExtractiontoIdRepository(List<ExtractorDto> dtoList,
 			String registrationId, Long startTime)
 			throws ApisResourceAccessException, IdrepoDraftReprocessableException, IdrepoDraftException {
-		List<String> queryParmeter = new ArrayList<>();
-		List<String> queryValue = new ArrayList<>();
+		String queryParmeter = new String();
+		String queryValue = new String();
 
 		for(ExtractorDto dto : dtoList) {
+			if(queryParmeter != null) {
+				queryParmeter += ",";
+				queryValue += ",";
+			}
+
 			if(dto.getBiometric().equals("iris")) {
-				queryParmeter.add("irisExtractionFormat");
-				queryValue.add(dto.getAttributeName());
+					queryParmeter += "irisExtractionFormat";
+					queryValue += dto.getAttributeName();
 			}if(dto.getBiometric().equals("face")) {
-				queryParmeter.add("faceExtractionFormat");
-				queryValue.add(dto.getAttributeName());
+					queryParmeter += "faceExtractionFormat";
+					queryValue += dto.getAttributeName();
 			}if(dto.getBiometric().equals("finger")) {
-				queryParmeter.add("fingerExtractionFormat");
-				queryValue.add(dto.getAttributeName());
+					queryParmeter += "fingerExtractionFormat";
+					queryValue += dto.getAttributeName();
 			}
 		}
 
