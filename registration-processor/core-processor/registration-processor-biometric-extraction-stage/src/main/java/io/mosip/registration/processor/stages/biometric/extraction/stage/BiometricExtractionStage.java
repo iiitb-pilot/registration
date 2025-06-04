@@ -357,31 +357,35 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 	private IdResponseDTO addBiometricExtractiontoIdRepository(List<ExtractorDto> dtoList,
 			String registrationId, Long startTime)
 			throws ApisResourceAccessException, IdrepoDraftReprocessableException, IdrepoDraftException {
-		String queryParmeter = new String();
-		String queryValue = new String();
+		StringBuilder queryParmeter = new StringBuilder();
+		StringBuilder queryValue = new StringBuilder();
 
 		for(ExtractorDto dto : dtoList) {
-			if(queryParmeter != null) {
-				queryParmeter += ",";
-				queryValue += ",";
+			String param = null;
+
+			if (dto.getBiometric().equals("iris")) {
+				param = "irisExtractionFormat";
+			} else if (dto.getBiometric().equals("face")) {
+				param = "faceExtractionFormat";
+			} else if (dto.getBiometric().equals("finger")) {
+				param = "fingerExtractionFormat";
 			}
 
-			if(dto.getBiometric().equals("iris")) {
-					queryParmeter += "irisExtractionFormat";
-					queryValue += dto.getAttributeName();
-			}if(dto.getBiometric().equals("face")) {
-					queryParmeter += "faceExtractionFormat";
-					queryValue += dto.getAttributeName();
-			}if(dto.getBiometric().equals("finger")) {
-					queryParmeter += "fingerExtractionFormat";
-					queryValue += dto.getAttributeName();
+			if(param == null) continue;
+
+			if(queryParmeter.length() > 0) {
+				queryParmeter.append(",");
+				queryValue.append(",");
 			}
+
+			queryParmeter.append(param);
+			queryValue.append(dto.getAttributeName());
 		}
 
 		List<String> segments=List.of(registrationId);
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "Before putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
-		IdResponseDTO response= (IdResponseDTO) registrationProcessorRestClientService.putApi(ApiName.IDREPOEXTRACTBIOMETRICS, segments, queryParmeter, queryValue, null, IdResponseDTO.class, null);
+		IdResponseDTO response= (IdResponseDTO) registrationProcessorRestClientService.putApi(ApiName.IDREPOEXTRACTBIOMETRICS, segments, queryParmeter.toString(), queryValue.toString(), null, IdResponseDTO.class, null);
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "After putting into Bucket " + (System.currentTimeMillis()-startTime) + " ms");
 		if (response.getErrors() != null && !response.getErrors().isEmpty()) {
