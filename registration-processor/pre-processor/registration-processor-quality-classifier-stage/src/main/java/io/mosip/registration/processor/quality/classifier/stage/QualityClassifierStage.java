@@ -2,10 +2,11 @@ package io.mosip.registration.processor.quality.classifier.stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -170,12 +171,21 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 
 	private TrimExceptionMessage trimExpMessage = new TrimExceptionMessage();
 
+	private ForkJoinPool forkJoinPool;
+
+	/**
+	 * Set Pool Size for the forkJoinPool to run the parallel thread
+	 */
+	@Value("${mosip.regproc.quality.classifier.max.pool.size}")
+	private Integer maxPoolSize;
+
 	@Autowired
 	private BioAPIFactory bioApiFactory;
 
 	@PostConstruct
 	private void generateParsedQualityRangeMap() {
 		parsedQualityRangeMap = new HashMap<>();
+		forkJoinPool = new ForkJoinPool((maxPoolSize != null ? maxPoolSize : workerPoolSize));
 		for (Map.Entry<String, String> entry : qualityClassificationRangeMap.entrySet()) {
 			String[] range = entry.getValue().split(RANGE_DELIMITER);
 			int[] rangeArray = new int[2];
@@ -408,9 +418,16 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 		iBioProviderApi bioProvider = bioApiFactory.getBioProvider(biometricType, BiometricFunction.QUALITY_CHECK);
 		return bioProvider;
 	}
-	
-	private Map<String, String> getQualityTags(List<BIR> birs) throws BiometricException{
-		
+
+	private Stream<BIR> getStream(List<BIR> birs) {
+		if(maxPoolSize != null)
+			return birs.parallelStream();
+		else
+			return  birs.stream();
+	}
+
+	private Map<String, String> getQualityTags(List<BIR> birs) throws BiometricException, ExecutionException, InterruptedException {
+		String uuid = UUID.randomUUID().toString();
 		Map<String, String> tags = new HashMap<String, String>();
 
 		// setting biometricNotAvailableTagValue for each modality in case biometrics are not available
@@ -422,42 +439,66 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 		}
 
 		HashMap<String, Float> bioTypeMinScoreMap = new HashMap<String, Float>();
+		HashMap<String, List<Float>> bioTypeScoreMap = new HashMap<String, List<Float>>();
+
 
 		// get individual biometrics file name from id.json
-		for (BIR bir : birs) {
-
-			if (bir.getOthers() != null) {
-				HashMap<String, String> othersInfo = bir.getOthers();
+		forkJoinPool.submit(() -> getStream(birs).forEach( bir -> {
+			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					"THAM - Stream - Entering For Loop " , uuid);
 				boolean exceptionValue = false;
-				for (Map.Entry<String, String> other : othersInfo.entrySet()) {
-					if (other.getKey().equals(EXCEPTION)) {
-						if (other.getValue().equals(TRUE)) {
-							exceptionValue = true;
+
+				if (bir.getOthers() != null) {
+					HashMap<String, String> othersInfo = bir.getOthers();
+					for (Map.Entry<String, String> other : othersInfo.entrySet()) {
+						if (other.getKey().equals(EXCEPTION)) {
+							if (other.getValue().equals(TRUE)) {
+								exceptionValue = true;
+							}
+							break;
 						}
-						break;
 					}
 				}
 
-				if (exceptionValue) {
-					continue;
+				if (!exceptionValue) {
+					try {
+						BiometricType biometricType = bir.getBdbInfo().getType().get(0);
+						BIR[] birArray = new BIR[1];
+						birArray[0] = bir;
+						if(!biometricType.name().equalsIgnoreCase(BiometricType.EXCEPTION_PHOTO.name())) {
+							long startTime = System.currentTimeMillis();
+							float[] qualityScoreresponse = null;
+							qualityScoreresponse = getBioSdkInstance(biometricType).getSegmentQuality(birArray, null);
+
+							regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), biometricType.name(),
+									"QualityCheckerStage::Time taken for check quality for " + biometricType.name() + " - " + (System.currentTimeMillis() - startTime) + " (ms)");
+							float score = qualityScoreresponse[0];
+							String bioType = bir.getBdbInfo().getType().get(0).value();
+
+							if(!bioTypeScoreMap.containsKey(bioType)) {
+								bioTypeScoreMap.put(bioType, new ArrayList<>());
+							}
+
+							bioTypeScoreMap.get(bioType).add(score);
+							regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+									"THAM - Stream - Size of Score " + bioType + " " +  bioTypeScoreMap.get(bioType).size() , uuid);
+						}
+					} catch (BiometricException e) {
+						throw new RuntimeException(e);
+					}
 				}
-			}
 
-			BiometricType biometricType = bir.getBdbInfo().getType().get(0);
-			BIR[] birArray = new BIR[1];
-			birArray[0] = bir;
-			if(!biometricType.name().equalsIgnoreCase(BiometricType.EXCEPTION_PHOTO.name())) {
-				long startTime = System.currentTimeMillis();
-				float[] qualityScoreresponse = getBioSdkInstance(biometricType).getSegmentQuality(birArray, null);
-				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), biometricType.name(),
-						"QualityCheckerStage::Time taken for check quality for " + biometricType.name() + " - " + (System.currentTimeMillis() - startTime) + " (ms)");
-				float score = qualityScoreresponse[0];
-				String bioType = bir.getBdbInfo().getType().get(0).value();
+			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					"THAM - Stream - Exist For Loop " , uuid);
+			})
+		).get();
 
-				// Check for entry
-				Float storedMinScore = bioTypeMinScoreMap.get(bioType);
+		//Check Minimum Score for Each Modality
+		for(Entry<String, List<Float>> scoreEntry : bioTypeScoreMap.entrySet()) {
+			for(Float score : scoreEntry.getValue()) {
+				Float storedMinScore = bioTypeMinScoreMap.get(scoreEntry.getKey());
 
-				bioTypeMinScoreMap.put(bioType,
+				bioTypeMinScoreMap.put(scoreEntry.getKey(),
 						storedMinScore == null ? score : storedMinScore > score ? score : storedMinScore);
 			}
 		}
