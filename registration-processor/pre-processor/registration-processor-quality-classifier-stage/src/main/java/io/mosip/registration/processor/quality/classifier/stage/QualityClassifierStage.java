@@ -176,7 +176,7 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 	/**
 	 * Set Pool Size for the forkJoinPool to run the parallel thread
 	 */
-	@Value("${mosip.regproc.quality.classifier.max.pool.size:null}")
+	@Value("${mosip.regproc.quality.classifier.max.pool.size:0}")
 	private Integer maxPoolSize;
 
 	@Autowired
@@ -185,7 +185,7 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 	@PostConstruct
 	private void generateParsedQualityRangeMap() {
 		parsedQualityRangeMap = new HashMap<>();
-		forkJoinPool = new ForkJoinPool((maxPoolSize != null ? maxPoolSize : workerPoolSize));
+		forkJoinPool = new ForkJoinPool((maxPoolSize > 0 ? maxPoolSize : workerPoolSize));
 		for (Map.Entry<String, String> entry : qualityClassificationRangeMap.entrySet()) {
 			String[] range = entry.getValue().split(RANGE_DELIMITER);
 			int[] rangeArray = new int[2];
@@ -420,7 +420,7 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 	}
 
 	private Stream<BIR> getStream(List<BIR> birs) {
-		if(maxPoolSize != null)
+		if(maxPoolSize > 0)
 			return birs.parallelStream();
 		else
 			return  birs.stream();
