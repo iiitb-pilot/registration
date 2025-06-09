@@ -176,7 +176,7 @@ public class QualityClassifierStage extends MosipVerticleAPIManager {
 	/**
 	 * Set Pool Size for the forkJoinPool to run the parallel thread
 	 */
-	@Value("${mosip.regproc.quality.classifier.max.pool.size}")
+	@Value("${mosip.regproc.quality.classifier.max.pool.size:null}")
 	private Integer maxPoolSize;
 
 	@Autowired
