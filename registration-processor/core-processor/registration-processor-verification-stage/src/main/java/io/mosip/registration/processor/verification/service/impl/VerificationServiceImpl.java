@@ -1,8 +1,12 @@
 package io.mosip.registration.processor.verification.service.impl;
 
+import static io.mosip.kernel.biometrics.commons.CbeffValidator.validateXML;
 import static io.mosip.registration.processor.verification.constants.VerificationConstants.DATETIME_PATTERN;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -14,7 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.net.URL;
 
+import io.mosip.kernel.biometrics.entities.BIR;
+import io.mosip.kernel.cbeffutil.container.impl.CbeffContainerImpl;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.JSONObject;
@@ -100,6 +108,9 @@ import io.mosip.registration.processor.verification.service.VerificationService;
 import io.mosip.registration.processor.verification.stage.VerificationStage;
 import io.mosip.registration.processor.verification.util.SaveVerificationRecordUtility;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+
 /**
  * The Class ManualAdjudicationServiceImpl.
  */
@@ -128,6 +139,12 @@ public class VerificationServiceImpl implements VerificationService {
 	/** The address. */
 	@Value("${registration.processor.queue.verification.request:mosip-to-verification}")
 	private String mvRequestAddress;
+
+	@Value("${mosip.kernel.xsdstorage-uri}")
+	private String configServerFileStorageURL;
+
+	@Value("${mosip.kernel.xsdfile}")
+	private String schemaFileName;
 
 	/**
 	 * Manual adjudication queue message expiry in seconds, if given 0 then message
@@ -293,7 +310,7 @@ public class VerificationServiceImpl implements VerificationService {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see io.mosip.registration.processor.verification.service.
 	 * ManualAdjudicationService#updatePacketStatus(io.mosip.registration.processor.
 	 * verification.dto.ManualVerificationDTO)
@@ -426,7 +443,7 @@ public class VerificationServiceImpl implements VerificationService {
 	/**
 	 * Basic validation of requestId received against the rid present in
 	 * manual-adjudication table Returns the correct rid after successful validation
-	 * 
+	 *
 	 * @param reqId : the request id
 	 * @return rid : the registration id
 	 */
@@ -466,7 +483,6 @@ public class VerificationServiceImpl implements VerificationService {
 			throw new NoRecordAssignedException(PlatformErrorMessages.RPR_MVS_NO_ASSIGNED_RECORD.getCode(),
 					PlatformErrorMessages.RPR_MVS_NO_ASSIGNED_RECORD.getMessage());
 		}
-
 		return entities;
 	}
 
@@ -533,7 +549,12 @@ public class VerificationServiceImpl implements VerificationService {
 			List<String> modalities = getModalities(policy);
 			BiometricRecord biometricRecord = packetManagerService.getBiometrics(id, individualBiometricsLabel,
 					modalities, process, ProviderStageName.VERIFICATION);
-			byte[] content = cbeffutil.createXML(biometricRecord.getSegments());
+			//byte[] content = cbeffutil.createXML(biometricRecord.getSegments());
+			CbeffContainerImpl cbeffContainer = new CbeffContainerImpl();
+			//BIR bir = cbeffContainer.createBIRType(birList);
+			BIR bir = cbeffContainer.createBIRType(biometricRecord.getSegments());
+			InputStream xsd = new URL(configServerFileStorageURL + schemaFileName).openStream();
+			byte[] content =createXMLBytes(bir,IOUtils.toByteArray(xsd));
 			requestDto.setBiometrics(content != null ? CryptoUtil.encodeToURLSafeBase64(content) : null);
 		}
 
@@ -569,7 +590,7 @@ public class VerificationServiceImpl implements VerificationService {
 		if (StringUtils.isEmpty(url))
 			url = protocol + internalDomainName + env.getProperty(ApiName.DATASHARECREATEURL.name());
 		url = url.replaceAll("[\\[\\]]", "");
-
+		url=url.replace("http://datashare.datashare","https://api-internal.dst-dev.mosip.net");
 		LinkedHashMap response = (LinkedHashMap) registrationProcessorRestClientService.postApi(url,
 				MediaType.MULTIPART_FORM_DATA, pathSegments, null, null, map, LinkedHashMap.class);
 		if (response == null || (response.get(ERRORS) != null))
@@ -578,6 +599,18 @@ public class VerificationServiceImpl implements VerificationService {
 
 		LinkedHashMap datashare = (LinkedHashMap) response.get(DATASHARE);
 		return datashare.get(URL) != null ? datashare.get(URL).toString() : null;
+	}
+	public byte[] createXMLBytes(BIR bir, byte[] xsd) throws Exception {
+		validateXML(bir);
+		JAXBContext jaxbContext = JAXBContext.newInstance(new Class[]{BIR.class});
+		Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+		jaxbMarshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		OutputStreamWriter writer = new OutputStreamWriter(baos);
+		jaxbMarshaller.marshal(bir, writer);
+		byte[] savedData = baos.toByteArray();
+		writer.close();
+		return savedData;
 	}
 
 	private Map<String, String> getPolicyMap(LinkedHashMap<String, Object> policies) throws IOException {
@@ -590,9 +623,7 @@ public class VerificationServiceImpl implements VerificationService {
 					shareableAttributes.getSource().iterator().next().getAttribute());
 		}
 		return policyMap;
-
 	}
-
 	private LinkedHashMap<String, Object> getPolicy() throws DataShareException, ApisResourceAccessException {
 		if (policies != null && policies.size() > 0)
 			return policies;
@@ -672,13 +703,10 @@ public class VerificationServiceImpl implements VerificationService {
 					ex.getErrorCode(), ex.getErrorText());
 			throw ex;
 		}
-
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), "",
 				"VerificationServiceImpl::formAdjudicationRequest()::entry");
-
 		return req;
 	}
-
 	/**
 	 * Process response for success flow.
 	 *
@@ -746,7 +774,6 @@ public class VerificationServiceImpl implements VerificationService {
 
 		return isTransactionSuccessful;
 	}
-
 	private void updateErrorFlags(InternalRegistrationStatusDto registrationStatusDto, MessageDTO object) {
 		object.setInternalError(true);
 		if (registrationStatusDto.getLatestTransactionStatusCode()
@@ -783,6 +810,4 @@ public class VerificationServiceImpl implements VerificationService {
 		}
 		return isResendFlow;
 	}
-
-
 }
