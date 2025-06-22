@@ -334,19 +334,22 @@ public class KafkaMosipEventBus implements MosipEventBus {
 		Map<String,String> mdc = MDC.getCopyOfContextMap();
 		eventHandler.handle(eventDTO, res -> {
 			if (!res.succeeded() && res.cause() instanceof MessageExpiredException) {
-				logger.warn("Event handling failed {}", res.cause().getMessage());
+				logger.info("Event handling failed {} for " + res.result().getRid(), res.cause().getMessage());
 				if(commitRecord)
 					commitOffset(record.topic(), record.partition(), 
 						record.offset(), promise);
 				else					
 					promise.complete();
 			} else if(!res.succeeded()) {
-				logger.error("Event handling failed {}", res.cause());
+				logger.info("Event handling failed {} for " + res.result().getRid(), res.cause());
 				promise.fail(res.cause());
 			} else if(res.succeeded() && res.result() == null){
+				logger.info("Event handling failed1 {} for " + res.result().getRid(), res.cause());
 				promise.complete();
 			} else {
+				logger.info("Entering toAddress Method for " + res.result().getRid());
 				if(toAddress != null) {
+					logger.info("Entered toAddress Method for " + res.result().getRid());
 					MessageDTO messageDTO = res.result();
 					MessageBusAddress messageBusToAddress = 
 						new MessageBusAddress(toAddress, messageDTO.getReg_type());
@@ -354,7 +357,9 @@ public class KafkaMosipEventBus implements MosipEventBus {
 					KafkaProducerRecord<String, String> producerRecord = 
 						KafkaProducerRecord.create(messageBusToAddress.getAddress(), 
 							messageDTO.getRid()+ "_" + messageBusToAddress.getAddress(), jsonObject.toString());
+					logger.info("Produce Record Success for " + res.result().getRid());
 					this.eventTracingHandler.writeHeaderOnKafkaProduce(producerRecord, span);
+					logger.info("Before Writing kafka for " + res.result().getRid());
 					kafkaProducer.write(producerRecord, handler -> {
 						MDC.setContextMap(mdc);
 						if(handler.failed())
