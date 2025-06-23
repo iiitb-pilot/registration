@@ -617,7 +617,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 		}
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), " Update ABIS Request Table for " + abisReqEntity.getId(), (new Gson()).toJson(abisReqEntity));
 		abisRequestRepositary.save(abisReqEntity);
-
+		abisRequestRepositary.flush();
 	}
 
 	private void updteAbisRequestProcessed(AbisCommonResponseDto abisCommonResponseDto,
