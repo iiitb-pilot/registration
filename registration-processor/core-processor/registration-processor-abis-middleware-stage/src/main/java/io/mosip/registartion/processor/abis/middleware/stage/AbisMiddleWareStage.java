@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import javax.jms.Message;
 import javax.jms.TextMessage;
 
+import com.google.gson.Gson;
 import org.apache.activemq.command.ActiveMQBytesMessage;
 import org.assertj.core.util.Arrays;
 import org.json.simple.JSONObject;
@@ -493,7 +494,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 
 					regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(),
 							"",
-							"AbisMiddlewareStage::consumerListener()::All identify are requests processed sending to Abis handler");
+							"AbisMiddlewareStage::consumerListener()::All identify are requests processed sending to Abis handler for RequestID" + requestId );
 
 					sendToAbisHandler(eventBus, bioRefId, registrationId, internalRegStatusDto.getRegistrationType(),
 							internalRegStatusDto.getIteration(), internalRegStatusDto.getWorkflowInstanceId(), internalRegStatusDto.getLatestTransactionFlowId());
@@ -503,7 +504,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 					regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(),
 							"",
 							"AbisMiddlewareStage::consumerListener()::Duplicate Identify Response received from abis for same request id ::"
-									+ requestId + " response " + inserOrIdentifyResponse);
+									+ requestId + " response " + inserOrIdentifyResponse + " Data : " + (new Gson()).toJson(abisCommonRequestDto));
 					isTransactionSuccessful = false;
 					description.setMessage(PlatformErrorMessages.DUPLICATE_IDENTITY_RESPONSE.getMessage() + requestId);
 					description.setCode(PlatformErrorMessages.DUPLICATE_IDENTITY_RESPONSE.getCode());
@@ -614,6 +615,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 					StatusUtil.INSERT_IDENTIFY_REQUEST_FAILED.getMessage() + abisRequestDto.getAbisAppCode());
 			internalRegDto.setSubStatusCode(StatusUtil.SYSTEM_EXCEPTION_OCCURED.getCode());
 		}
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), " Update ABIS Request Table for " + abisReqEntity.getId(), (new Gson()).toJson(abisReqEntity));
 		abisRequestRepositary.save(abisReqEntity);
 
 	}
@@ -648,6 +650,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 		abisReqEntity.setBioRefId(abisCommonRequestDto.getBioRefId());
 		abisReqEntity.setRefRegtrnId(abisCommonRequestDto.getRefRegtrnId());
 		abisReqEntity.setReqText(abisCommonRequestDto.getReqText());
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), " Update ABIS Request for Processed Table for " + abisReqEntity.getId(), (new Gson()).toJson(abisReqEntity));
 		abisRequestRepositary.save(abisReqEntity);
 	}
 
