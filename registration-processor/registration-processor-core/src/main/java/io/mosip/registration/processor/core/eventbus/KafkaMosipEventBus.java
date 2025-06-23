@@ -347,7 +347,7 @@ public class KafkaMosipEventBus implements MosipEventBus {
 				logger.info("Event handling failed1 {} for " + res.result().getRid(), res.cause());
 				promise.complete();
 			} else {
-				logger.info("Entering toAddress Method for " + res.result().getRid() + " for Address " + toAddress.getAddress());
+				logger.info("Entering toAddress Method for " + res.result().getRid() + " for Address " + (toAddress != null ? toAddress.getAddress() : ""));
 				if(toAddress != null) {
 					logger.info("Entered toAddress Method for " + res.result().getRid());
 					MessageDTO messageDTO = res.result();
