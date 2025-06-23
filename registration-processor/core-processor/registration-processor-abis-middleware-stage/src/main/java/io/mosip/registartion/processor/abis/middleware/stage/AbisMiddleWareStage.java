@@ -402,7 +402,7 @@ public class AbisMiddleWareStage extends MosipVerticleAPIManager {
 			internalRegStatusDto = registrationStatusService.getRegistrationStatus(registrationId,
 					regBioRefDto.getProcess(), regBioRefDto.getIteration(), regBioRefDto.getWorkflowInstanceId());
 			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), "",
-					"AbisMiddlewareStage::consumerListener()::response from abis for requestId ::" + requestId);
+					"AbisMiddlewareStage::consumerListener()::response from abis for requestId ::" + requestId  +  "Response " +  response);
 
 			AbisRequestDto abisCommonRequestDto = packetInfoManager.getAbisRequestByRequestId(requestId);
 			// check for insert response,if success send corresponding identify request to
