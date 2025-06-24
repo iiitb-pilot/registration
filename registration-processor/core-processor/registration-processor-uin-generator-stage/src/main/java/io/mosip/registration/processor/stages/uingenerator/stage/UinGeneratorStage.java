@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -259,6 +260,8 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 						idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "getFields from Packet Manager Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						registrationId, "getFields from Packet Manager RID : " + registrationId + " " + (new Gson()).toJson(fieldMap));
 
 				String uinField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.UIN, MappingJsonConstants.IDENTITY));
 
