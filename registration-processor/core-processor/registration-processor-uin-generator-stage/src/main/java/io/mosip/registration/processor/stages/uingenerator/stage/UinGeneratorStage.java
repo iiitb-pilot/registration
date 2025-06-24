@@ -256,12 +256,15 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "getFieldByMappingJsonKey Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
 
+				List<String> fields = idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion));
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						registrationId, "THAM - Get List of Fields from mapping RID : " + registrationId + " " + (new Gson()).toJson(fields));
 				Map<String, String> fieldMap = packetManagerService.getFields(registrationId,
-						idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
+						fields , registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "getFields from Packet Manager Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationId, "getFields from Packet Manager RID : " + registrationId + " " + (new Gson()).toJson(fieldMap));
+						registrationId, "THAM - getFields from Packet Manager RID : " + registrationId + " " + (new Gson()).toJson(fieldMap));
 
 				String uinField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.UIN, MappingJsonConstants.IDENTITY));
 
