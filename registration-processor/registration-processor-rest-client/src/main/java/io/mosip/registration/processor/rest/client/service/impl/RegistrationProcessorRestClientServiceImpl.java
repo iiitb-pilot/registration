@@ -367,6 +367,7 @@ public class RegistrationProcessorRestClientServiceImpl implements RegistrationP
 
 			try {
 				Long startTime = System.nanoTime();
+				regProcLogger.info("SESSION_ID", "GET API Call", "THAM - Calling Patch API", "PATCH API for  - " + builder.toUriString() + " Time taken to complete ");
 				obj = restApiClient.patchApi(builder.toUriString(), requestedData, responseType);
 				Long timeDifference = System.nanoTime()-startTime;
 				regProcLogger.debug("SESSION_ID", "GET API Call", "RESPONSE", "PATCH API for  - " + builder.toUriString() + " Time taken to complete " + TimeUnit.MILLISECONDS.convert(timeDifference, TimeUnit.NANOSECONDS));
