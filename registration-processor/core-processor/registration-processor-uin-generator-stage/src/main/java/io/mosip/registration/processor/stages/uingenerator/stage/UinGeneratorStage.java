@@ -564,8 +564,16 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 		idRequestDTO.setRequesttime(DateUtils.getUTCCurrentDateTimeString());
 		idRequestDTO.setVersion(UINConstants.idRepoApiVersion);
 		idRequestDTO.setMetadata(null);
+		IdRequestDto idRequestDTO1 = new IdRequestDto();
+		idRequestDTO1.setId(idRepoUpdate);
+		idRequestDTO1.setRequest(requestDto);
+		idRequestDTO1.setRequesttime(DateUtils.getUTCCurrentDateTimeString());
+		idRequestDTO1.setVersion(UINConstants.idRepoApiVersion);
+		idRequestDTO1.setMetadata(null);
+		idRequestDTO1.getRequest().setDocuments(null);
+
 		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-				id, "THAM - Request for IDREPO Update RID : " + id + " " + (new Gson()).toJson(idRequestDTO));
+				id, "THAM - Request for IDREPO Update RID : " + id + " " + (new Gson()).toJson(idRequestDTO1));
 
 
 		try {
