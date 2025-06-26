@@ -320,6 +320,8 @@ public class PriorityBasedPacketManagerService {
                 biometricRecord = new BiometricRecord();
             biometricRecord.getSegments().addAll(record.getSegments());
         }
+        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Final Response " + objectMapper.writeValueAsString(biometricRecord));
+
         return biometricRecord;
 
     }
