@@ -282,7 +282,9 @@ public class PriorityBasedPacketManagerService {
 
         if (CollectionUtils.isEmpty(finalKeyMap)) {
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Method Modality " + objectMapper.writeValueAsString(modalities));
-            return packetManagerService.getBiometrics(id, person, modalities, null, process);
+            BiometricRecord biometricRecord = packetManagerService.getBiometrics(id, person, modalities, null, process);
+            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Final Response " + objectMapper.writeValueAsString(biometricRecord));
+            return biometricRecord;
         }
         // else get fields based on priority set in individual stage level
         InfoResponseDto infoResponseDto = packetManagerService.info(id);
@@ -293,7 +295,9 @@ public class PriorityBasedPacketManagerService {
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method containerInfoDto " + objectMapper.writeValueAsString(containerInfoDto));
             modalities = CollectionUtils.isEmpty(modalities) ? PacketManagerHelper.getTypeSubtypeModalities(containerInfoDto) : modalities;
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method modalities " + objectMapper.writeValueAsString(modalities));
-            return packetManagerService.getBiometrics(id, person, modalities, containerInfoDto.getSource(), containerInfoDto.getProcess());
+            BiometricRecord biometricRecord =packetManagerService.getBiometrics(id, person, modalities, containerInfoDto.getSource(), containerInfoDto.getProcess());
+            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Final Response " + objectMapper.writeValueAsString(biometricRecord));
+            return biometricRecord;
         }
 
         Set<ContainerInfoDto> containers = new HashSet<>();
