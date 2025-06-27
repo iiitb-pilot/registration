@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.Gson;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -256,15 +255,10 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "getFieldByMappingJsonKey Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
 
-				List<String> fields = idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion));
-				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationId, "THAM - Get List of Fields from mapping RID : " + registrationId + " " + (new Gson()).toJson(fields));
 				Map<String, String> fieldMap = packetManagerService.getFields(registrationId,
-						fields , registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
+						idSchemaUtil.getDefaultFields(Double.valueOf(schemaVersion)), registrationStatusDto.getRegistrationType(), ProviderStageName.UIN_GENERATOR);
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "getFields from Packet Manager Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
-				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationId, "THAM - getFields from Packet Manager RID : " + registrationId + " " + (new Gson()).toJson(fieldMap));
 
 				String uinField = fieldMap.get(utility.getMappingJsonValue(MappingJsonConstants.UIN, MappingJsonConstants.IDENTITY));
 
@@ -274,9 +268,6 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 				loadDemographicIdentity(fieldMap, demographicIdentity);
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "loadDemographicIdentity() Complete for Registration RID : " + registrationId + " " + (System.currentTimeMillis() - startTime) + " ms");
-				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						registrationId, "THAM - get Demographics from RID : " + registrationId + " " + (new Gson()).toJson(demographicIdentity));
-
 
 				if (StringUtils.isEmpty(uinField) || uinField.equalsIgnoreCase("null") ) {
 
@@ -564,17 +555,6 @@ public class UinGeneratorStage extends MosipVerticleAPIManager {
 		idRequestDTO.setRequesttime(DateUtils.getUTCCurrentDateTimeString());
 		idRequestDTO.setVersion(UINConstants.idRepoApiVersion);
 		idRequestDTO.setMetadata(null);
-		IdRequestDto idRequestDTO1 = new IdRequestDto();
-		idRequestDTO1.setId(idRepoUpdate);
-		idRequestDTO1.setRequest(requestDto);
-		idRequestDTO1.setRequesttime(DateUtils.getUTCCurrentDateTimeString());
-		idRequestDTO1.setVersion(UINConstants.idRepoApiVersion);
-		idRequestDTO1.setMetadata(null);
-		idRequestDTO1.getRequest().setDocuments(null);
-
-		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-				id, "THAM - Request for IDREPO Update RID : " + id + " " + (new Gson()).toJson(idRequestDTO1));
-
 
 		try {
 			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),

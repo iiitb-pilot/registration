@@ -1,19 +1,17 @@
 package io.mosip.registration.processor.packet.storage.utils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.mosip.kernel.biometrics.constant.BiometricType;
+import io.mosip.kernel.biometrics.entities.BIR;
 import io.mosip.kernel.core.logger.spi.Logger;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.logger.RegProcessorLogger;
+import org.apache.commons.collections.ListUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.assertj.core.util.Lists;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -282,8 +280,8 @@ public class PriorityBasedPacketManagerService {
 
         if (CollectionUtils.isEmpty(finalKeyMap)) {
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Method Modality " + objectMapper.writeValueAsString(modalities));
-            BiometricRecord biometricRecord = packetManagerService.getBiometrics(id, person, modalities, null, process);
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Final Response " + objectMapper.writeValueAsString(biometricRecord));
+            BiometricRecord biometricRecord = buildBiometricRecord(modalities, packetManagerService.getBiometrics(id, person, null, null, process));
+                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Final Response " + objectMapper.writeValueAsString(biometricRecord));
             return biometricRecord;
         }
         // else get fields based on priority set in individual stage level
@@ -295,7 +293,7 @@ public class PriorityBasedPacketManagerService {
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method containerInfoDto " + objectMapper.writeValueAsString(containerInfoDto));
             modalities = CollectionUtils.isEmpty(modalities) ? PacketManagerHelper.getTypeSubtypeModalities(containerInfoDto) : modalities;
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method modalities " + objectMapper.writeValueAsString(modalities));
-            BiometricRecord biometricRecord =packetManagerService.getBiometrics(id, person, modalities, containerInfoDto.getSource(), containerInfoDto.getProcess());
+            BiometricRecord biometricRecord = buildBiometricRecord(modalities, packetManagerService.getBiometrics(id, person, null, containerInfoDto.getSource(), containerInfoDto.getProcess()));
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Final Response " + objectMapper.writeValueAsString(biometricRecord));
             return biometricRecord;
         }
@@ -317,17 +315,55 @@ public class PriorityBasedPacketManagerService {
         for (ContainerInfoDto containerInfoDto : containers) {
             List<String> containerModalities = CollectionUtils.isEmpty(modalities) ? PacketManagerHelper.getTypeSubtypeModalities(containerInfoDto) : modalities;
             regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Third Method containerModalities " + objectMapper.writeValueAsString(containerModalities));
-            BiometricRecord record = packetManagerService.getBiometrics(
-                    id, person, containerModalities, containerInfoDto.getSource(), containerInfoDto.getProcess());
 
-            if (biometricRecord == null)
-                biometricRecord = new BiometricRecord();
-            biometricRecord.getSegments().addAll(record.getSegments());
+            biometricRecord = buildBiometricRecord(containerModalities, packetManagerService.getBiometrics(id, person, null, containerInfoDto.getSource(), containerInfoDto.getProcess()));
         }
         regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Final Response " + objectMapper.writeValueAsString(biometricRecord));
 
         return biometricRecord;
 
+    }
+
+    public BiometricRecord buildBiometricRecord(List<String> modalities, BiometricRecord biometricRecord) {
+        BiometricRecord record = new BiometricRecord();
+        record.setCbeffversion(biometricRecord.getCbeffversion());
+        record.setVersion(biometricRecord.getVersion());
+        record.setBirInfo(biometricRecord.getBirInfo());
+        record.setOthers(biometricRecord.getOthers());
+        record.setSegments(filterByModalities(modalities, biometricRecord.getSegments()));
+        return record;
+    }
+
+    public List<BIR> filterByModalities(List<String> modalities,
+                                        List<BIR> birList) {
+        List<BIR> segments = new ArrayList<>();
+        if (CollectionUtils.isEmpty(modalities)) {
+            return birList;
+        } else {
+            // first search modalities in subtype and if not present search in type
+            for (BIR bir : birList) {
+                if (!CollectionUtils.isEmpty(bir.getBdbInfo().getSubtype())
+                        && isModalityPresentInTypeSubtype(bir.getBdbInfo().getSubtype(), modalities)) {
+                    segments.add(bir);
+                } else {
+                    for (BiometricType type : bir.getBdbInfo().getType()) {
+                        if (isModalityPresentInTypeSubtype(Lists.newArrayList(type.value()), modalities))
+                            segments.add(bir);
+                    }
+                }
+            }
+        }
+        return segments;
+    }
+
+    private boolean isModalityPresentInTypeSubtype(List<String> typeSubtype, List<String> modalities) {
+        boolean isPresent = false;
+        for (String modality : modalities) {
+            String[] modalityArray = modality.split(" ");
+            if (ArrayUtils.isNotEmpty(modalityArray) && ListUtils.isEqualList(typeSubtype, Arrays.asList(modalityArray)))
+                isPresent = true;
+        }
+        return isPresent;
     }
 
     private Map<String, String> getFieldsByPriority(String id, ProviderStageName stageName, List<String> fields)

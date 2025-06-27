@@ -209,7 +209,6 @@ public class PacketManagerService extends PriorityBasedPacketManagerService {
         request.setVersion(VERSION);
         request.setRequesttime(DateUtils.getUTCCurrentDateTime());
         request.setRequest(fieldDto);
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - Get Biometrics from PacketManager is " + objectMapper.writeValueAsString(request));
         ResponseWrapper<BiometricRecord> response = (ResponseWrapper) restApi.postApi(ApiName.PACKETMANAGER_SEARCH_BIOMETRICS, "", "", request, ResponseWrapper.class);
 
         if (response.getErrors() != null && response.getErrors().size() > 0) {

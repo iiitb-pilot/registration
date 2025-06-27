@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import org.assertj.core.util.Lists;
 import org.json.simple.JSONObject;
@@ -76,8 +75,7 @@ public class IdrepoDraftService {
 
         ResponseWrapper response = (ResponseWrapper) registrationProcessorRestClientService.postApi(
                 ApiName.IDREPOCREATEDRAFT, Lists.newArrayList(id), queryParam, queryParamValue, null, ResponseWrapper.class);
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                id, "THAM - IDRepo Draft Creation Response  RID : " + id + " " + (new Gson()).toJson(response));
+
         return  (response.getErrors() == null || response.getErrors().isEmpty());
     }
 
@@ -93,9 +91,6 @@ public class IdrepoDraftService {
         } else {
             regProcLogger.info("Existing draft found for id " + id + ". Updating uin in demographic identity.");
             ResponseDTO responseDTO = idrepoGetDraft(id);
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                    id, "THAM - IDRepo Draft Response RID : " + id + " " + (new Gson()).toJson(responseDTO));
-
             RequestDto requestDto = new RequestDto();
             requestDto.setAnonymousProfile(responseDTO.getAnonymousProfile());
             requestDto.setBiometricReferenceId(responseDTO.getBiometricReferenceId());
@@ -107,8 +102,7 @@ public class IdrepoDraftService {
             requestDto.setStatus(responseDTO.getStatus());
             requestDto.setUin(responseDTO.getUin());
             idRequestDto.setRequest(requestDto);
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                    id, "THAM - IDRepo final Request RID : " + id + " " + (new Gson()).toJson(idRequestDto));
+
         }
 
         IdResponseDTO response = (IdResponseDTO) registrationProcessorRestClientService.patchApi(
