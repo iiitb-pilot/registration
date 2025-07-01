@@ -167,12 +167,12 @@ public class BiometricExtractionStage extends MosipVerticleAPIManager{
 		InternalRegistrationStatusDto registrationStatusDto=null;
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				registrationId, "BiometricExtractionStage::process()::entry");
-			try {
-		registrationStatusDto = registrationStatusService.getRegistrationStatus(
+		try {
+		 registrationStatusDto = registrationStatusService.getRegistrationStatus(
 				registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
-			registrationStatusDto
-					.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.BIOMETRIC_EXTRACTION.toString());
-			registrationStatusDto.setRegistrationStageName(getStageName());
+		registrationStatusDto
+			.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.BIOMETRIC_EXTRACTION.toString());
+		registrationStatusDto.setRegistrationStageName(getStageName());
 				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 						registrationId, "THAM - BIOEXTRACTION - After Fetching Reg Record " + (System.currentTimeMillis()-startTime) + " ms");
 

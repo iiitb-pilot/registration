@@ -44,16 +44,11 @@ public class PriorityBasedPacketManagerService {
     @Autowired
     private PacketManagerService packetManagerService;
 
-    private static Logger regProcLogger = RegProcessorLogger.getLogger(PriorityBasedPacketManagerService.class);
-
     private static Map<String, String> providerConfiguration;
 
     public static void initialize(Map<String, String> provider) {
         providerConfiguration = provider;
     }
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     /**
      * Get fields by mapping json Constant key.
@@ -268,33 +263,22 @@ public class PriorityBasedPacketManagerService {
 
     private BiometricRecord getBiometricsInternal(String id, String person, List<String> modalities, String process, ProviderStageName stageName)
             throws IOException, ApisResourceAccessException, PacketManagerException, JsonProcessingException {
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Provider Configuration " + objectMapper.writeValueAsString(providerConfiguration));
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader person " + person);
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader stageName " + stageName);
 
         Map<String, String> finalKeyMap = PacketManagerHelper.getKeyMap(stageName, providerConfiguration).isEmpty() ? null
                 : PacketManagerHelper.getKeyMap(stageName, providerConfiguration).entrySet().stream().filter(
                 key -> key.getKey().contains(person)).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
         // if there is no priority set for individual stage
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader finalKeyMap " + objectMapper.writeValueAsString(finalKeyMap));
-
         if (CollectionUtils.isEmpty(finalKeyMap)) {
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Method Modality " + objectMapper.writeValueAsString(modalities));
             BiometricRecord biometricRecord = buildBiometricRecord(modalities, packetManagerService.getBiometrics(id, person, null, null, process));
-                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader First Final Response " + objectMapper.writeValueAsString(biometricRecord));
             return biometricRecord;
         }
         // else get fields based on priority set in individual stage level
         InfoResponseDto infoResponseDto = packetManagerService.info(id);
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader infoResponseDto " + objectMapper.writeValueAsString(infoResponseDto));
         // if there is no type/subtype set in properties
         if (finalKeyMap.get(person) != null) {
             ContainerInfoDto containerInfoDto = PacketManagerHelper.getContainerInfo(finalKeyMap, person, infoResponseDto);
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method containerInfoDto " + objectMapper.writeValueAsString(containerInfoDto));
             modalities = CollectionUtils.isEmpty(modalities) ? PacketManagerHelper.getTypeSubtypeModalities(containerInfoDto) : modalities;
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Method modalities " + objectMapper.writeValueAsString(modalities));
             BiometricRecord biometricRecord = buildBiometricRecord(modalities, packetManagerService.getBiometrics(id, person, null, containerInfoDto.getSource(), containerInfoDto.getProcess()));
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Second Final Response " + objectMapper.writeValueAsString(biometricRecord));
             return biometricRecord;
         }
 
@@ -303,22 +287,18 @@ public class PriorityBasedPacketManagerService {
 
         for (String key : finalKeyMap.keySet()) {
             ContainerInfoDto containerInfoDto = PacketManagerHelper.getBiometricContainerInfo(finalKeyMap, person, key, infoResponseDto);
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Third Method containerInfoDto " + objectMapper.writeValueAsString(containerInfoDto));
             if (containerInfoDto != null) {
                 Optional<Boolean> optional = containers.stream().map(c -> c.equals(containerInfoDto)).findAny();
                 if (!optional.isPresent() || optional.get().equals(Boolean.FALSE))
                     containers.add(containerInfoDto);
             }
         }
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Third Method containers " + objectMapper.writeValueAsString(containers));
 
         for (ContainerInfoDto containerInfoDto : containers) {
             List<String> containerModalities = CollectionUtils.isEmpty(modalities) ? PacketManagerHelper.getTypeSubtypeModalities(containerInfoDto) : modalities;
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Third Method containerModalities " + objectMapper.writeValueAsString(containerModalities));
 
             biometricRecord = buildBiometricRecord(containerModalities, packetManagerService.getBiometrics(id, person, null, containerInfoDto.getSource(), containerInfoDto.getProcess()));
         }
-        regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, "THAM - BiometricReader Final Response " + objectMapper.writeValueAsString(biometricRecord));
 
         return biometricRecord;
 

@@ -47,8 +47,6 @@ public class TransactionDto implements Serializable {
 	/** The reference id type. */
 	private String referenceIdType;
 
-	private String transactionFlowId;
-
 	/**
 	 * Instantiates a new transaction dto.
 	 */
@@ -75,7 +73,7 @@ public class TransactionDto implements Serializable {
 	 *            the status comment
 	 */
 	public TransactionDto(String transactionId, String registrationId, String parentid, String trntypecode,
-			String remarks, String statusCode, String statusComment,String subStatusCode, String transactionFlowId) {
+			String remarks, String statusCode, String statusComment,String subStatusCode) {
 		super();
 		this.transactionId = transactionId;
 		this.registrationId = registrationId;
@@ -85,7 +83,6 @@ public class TransactionDto implements Serializable {
 		this.statusCode = statusCode;
 		this.statusComment = statusComment;
 		this.subStatusCode= subStatusCode;
-		this.transactionFlowId = transactionFlowId;
 	}
 
 	/**
@@ -314,11 +311,4 @@ public class TransactionDto implements Serializable {
 		this.subStatusCode = subStatusCode;
 	}
 
-	public String getTransactionFlowId() {
-		return transactionFlowId;
-	}
-
-	public void setTransactionFlowId(String transactionFlowId) {
-		this.transactionFlowId = transactionFlowId;
-	}
 }

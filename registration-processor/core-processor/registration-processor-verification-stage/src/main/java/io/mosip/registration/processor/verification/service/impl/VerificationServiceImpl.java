@@ -219,71 +219,71 @@ public class VerificationServiceImpl implements VerificationService {
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService.getRegistrationStatus(
 				messageDTO.getRid(), messageDTO.getReg_type(), messageDTO.getIteration(),
 				messageDTO.getWorkflowInstanceId());
-			try {
-				if (null == messageDTO.getRid() || messageDTO.getRid().isEmpty())
-					throw new InvalidRidException(PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getCode(),
-							PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getMessage());
-				VerificationRequestDTO mar = prepareVerificationRequest(messageDTO, registrationStatusDto);
-				saveVerificationRecordUtility.saveVerificationRecord(messageDTO, mar.getRequestId(), description);
-				regProcLogger.debug("Request : " + JsonUtils.javaObjectToJsonString(mar));
+		try {
+			if (null == messageDTO.getRid() || messageDTO.getRid().isEmpty())
+				throw new InvalidRidException(PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getCode(),
+						PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getMessage());
+			VerificationRequestDTO mar = prepareVerificationRequest(messageDTO, registrationStatusDto);
+			saveVerificationRecordUtility.saveVerificationRecord(messageDTO, mar.getRequestId(), description);
+			regProcLogger.debug("Request : " + JsonUtils.javaObjectToJsonString(mar));
 
-				if (messageFormat.equalsIgnoreCase(TEXT_MESSAGE))
-					mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(mar), mvRequestAddress,
-							mvRequestMessageTTL);
-				else
-					mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(mar).getBytes(), mvRequestAddress,
-							mvRequestMessageTTL);
+			if (messageFormat.equalsIgnoreCase(TEXT_MESSAGE))
+				mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(mar), mvRequestAddress,
+						mvRequestMessageTTL);
+			else
+				mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(mar).getBytes(), mvRequestAddress,
+						mvRequestMessageTTL);
 
-				regProcLogger.info("ID : " + messageDTO.getRid() + " has been successfully sent for verification.");
+			regProcLogger.info("ID : " + messageDTO.getRid() + " has been successfully sent for verification.");
 
-				if (isTransactionSuccessful) {
-					registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
-					registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_SENT.getCode());
-					registrationStatusDto.setStatusComment(StatusUtil.VERIFICATION_SENT.getMessage());
-					registrationStatusDto
-							.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.IN_PROGRESS.toString());
-				} else {
-					registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
-					registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
-					registrationStatusDto.setStatusComment(StatusUtil.VERIFICATION_FAILED.getMessage());
-					registrationStatusDto
-							.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.ERROR.toString());
-				}
-				registrationStatusDto.setRegistrationStageName(stageName);
-
-			} catch (DataShareException de) {
-				messageDTO.setInternalError(true);
-				isTransactionSuccessful = false;
-				description.setCode(de.getErrorCode());
-				description.setMessage(de.getMessage());
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						de.getErrorCode(), de.getErrorText());
-
-			} catch (InvalidRidException exp) {
-				isTransactionSuccessful = false;
-				description.setCode(exp.getErrorCode());
-				description.setMessage(exp.getMessage());
-				messageDTO.setInternalError(true);
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), null, exp.getErrorCode(), exp.getErrorText());
-
-			} catch (Exception e) {
-				isTransactionSuccessful = false;
-				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SENT.getCode());
-				description.setMessage(e.getMessage());
-				messageDTO.setInternalError(true);
-				regProcLogger.error(ExceptionUtils.getStackTrace(e));
-				regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-						e.getMessage(), e.getMessage());
-			} finally {
-				if (isTransactionSuccessful) {
-					messageDTO.setIsValid(true);
-					description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
-					description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
-				} else
-					registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
-				updateStatus(messageDTO, registrationStatusDto, isTransactionSuccessful, description,
-						PlatformSuccessMessages.RPR_VERIFICATION_SENT);
+			if (isTransactionSuccessful) {
+				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+				registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_SENT.getCode());
+				registrationStatusDto.setStatusComment(StatusUtil.VERIFICATION_SENT.getMessage());
+				registrationStatusDto
+						.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.IN_PROGRESS.toString());
+			} else {
+				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+				registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
+				registrationStatusDto.setStatusComment(StatusUtil.VERIFICATION_FAILED.getMessage());
+				registrationStatusDto
+						.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.ERROR.toString());
 			}
+			registrationStatusDto.setRegistrationStageName(stageName);
+
+		} catch (DataShareException de) {
+			messageDTO.setInternalError(true);
+			isTransactionSuccessful = false;
+			description.setCode(de.getErrorCode());
+			description.setMessage(de.getMessage());
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					de.getErrorCode(), de.getErrorText());
+
+		} catch (InvalidRidException exp) {
+			isTransactionSuccessful = false;
+			description.setCode(exp.getErrorCode());
+			description.setMessage(exp.getMessage());
+			messageDTO.setInternalError(true);
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), null, exp.getErrorCode(), exp.getErrorText());
+
+		} catch (Exception e) {
+			isTransactionSuccessful = false;
+			description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SENT.getCode());
+			description.setMessage(e.getMessage());
+			messageDTO.setInternalError(true);
+			regProcLogger.error(ExceptionUtils.getStackTrace(e));
+			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					e.getMessage(), e.getMessage());
+		} finally {
+			if (isTransactionSuccessful) {
+				messageDTO.setIsValid(true);
+				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
+				description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
+			} else
+				registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
+			updateStatus(messageDTO, registrationStatusDto, isTransactionSuccessful, description,
+					PlatformSuccessMessages.RPR_VERIFICATION_SENT);
+		}
 
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				messageDTO.getRid(), "VerificationServiceImpl::process()::entry");
@@ -324,8 +324,6 @@ public class VerificationServiceImpl implements VerificationService {
 			messageDTO.setIsValid(false);
 			messageDTO.setRid(regId);
 			messageDTO.setReg_type(registrationStatusDto.getRegistrationType());
-			messageDTO.setTransactionFlowId(registrationStatusDto.getLatestTransactionFlowId());
-			messageDTO.setTransactionId(UUID.randomUUID().toString());
 
 			List<VerificationEntity> entities = retrieveInqueuedRecordsByRid(regId);
 

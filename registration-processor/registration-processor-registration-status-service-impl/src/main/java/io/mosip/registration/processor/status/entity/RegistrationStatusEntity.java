@@ -54,10 +54,6 @@ public class RegistrationStatusEntity extends BaseRegistrationEntity<BaseRegistr
 	@Column(name = "latest_trn_id")
 	private String latestRegistrationTransactionId;
 
-	/** The latest transaction flow id. */
-	@Column(name = "latest_trn_flow_id")
-	private String latestTransactionFlowId;
-
 	/** The is active. */
 	@Column(name = "is_active")
 	private Boolean isActive;
@@ -68,6 +64,7 @@ public class RegistrationStatusEntity extends BaseRegistrationEntity<BaseRegistr
 
 	/** The create date time. */
 	@Column(name = "cr_dtimes", updatable = false)
+
 	private LocalDateTime createDateTime;
 
 	public LocalDateTime getPacketCreatedDateTime() {
@@ -624,14 +621,6 @@ public class RegistrationStatusEntity extends BaseRegistrationEntity<BaseRegistr
 		this.lastSuccessStageName = lastSuccessStageName;
 	}
 
-	public String getLatestTransactionFlowId() {
-		return latestTransactionFlowId;
-	}
-
-	public void setLatestTransactionFlowId(String latestTransactionFlowId) {
-		this.latestTransactionFlowId = latestTransactionFlowId;
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -664,12 +653,11 @@ public class RegistrationStatusEntity extends BaseRegistrationEntity<BaseRegistr
 				Objects.equals(resumeTimeStamp, that.resumeTimeStamp) &&
 				Objects.equals(defaultResumeAction, that.defaultResumeAction) &&
 				Objects.equals(pauseRuleIds, that.pauseRuleIds) &&
-				Objects.equals(lastSuccessStageName, that.lastSuccessStageName) &&
-				Objects.equals(latestTransactionFlowId, that.latestTransactionFlowId);
+				Objects.equals(lastSuccessStageName, that.lastSuccessStageName);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, regId, registrationType, iteration, referenceRegistrationId, source, statusCode, langCode, statusComment, latestRegistrationTransactionId, isActive, createdBy, createDateTime, updatedBy, updateDateTime, isDeleted, deletedDateTime, retryCount, applicantType, latestTransactionTypeCode, latestTransactionStatusCode, latestTransactionTimes, registrationStageName, regProcessRetryCount, resumeTimeStamp, defaultResumeAction, pauseRuleIds, lastSuccessStageName, latestTransactionFlowId);
+		return Objects.hash(id, regId, registrationType, iteration, referenceRegistrationId, source, statusCode, langCode, statusComment, latestRegistrationTransactionId, isActive, createdBy, createDateTime, updatedBy, updateDateTime, isDeleted, deletedDateTime, retryCount, applicantType, latestTransactionTypeCode, latestTransactionStatusCode, latestTransactionTimes, registrationStageName, regProcessRetryCount, resumeTimeStamp, defaultResumeAction, pauseRuleIds, lastSuccessStageName);
 	}
 }

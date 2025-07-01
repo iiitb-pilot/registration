@@ -20,4 +20,5 @@ public interface TransactionRepository<T extends BaseTransactionEntity, E> exten
 	@Query("SELECT trn FROM TransactionEntity trn WHERE trn.registrationId=:regId and trn.statusCode=:statusCode")
 	public List<T> getTransactionByRegIdAndStatusCode(@Param("regId") String regId,
 			@Param("statusCode") String statusCode);
+
 }

@@ -185,6 +185,7 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
 
     @Override
     public MessageDTO validateAndUploadPacket(MessageDTO messageDTO, String stageName) {
+
         LogDescription description = new LogDescription();
         InternalRegistrationStatusDto dto = new InternalRegistrationStatusDto();
         messageDTO.setInternalError(Boolean.FALSE);
@@ -203,203 +204,201 @@ public class PacketUploaderServiceImpl implements PacketUploaderService<MessageD
                     registrationId, messageDTO.getReg_type(), messageDTO.getIteration(), regEntity.getWorkflowInstanceId());
             regProcLogger.info("THAM - PacketUpload - Find Registration status for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                    registrationId, "PacketUploaderServiceImpl::validateAndUploadPacket():: Flow Id" + dto.getLatestTransactionFlowId());
-                dto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.UPLOAD_PACKET.toString());
-                dto.setRegistrationStageName(stageName);
-                startTime = System.currentTimeMillis();
-                final byte[] encryptedByteArray = getPakcetFromDMZ(regEntity.getPacketId(),registrationId);
+            dto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.UPLOAD_PACKET.toString());
+            dto.setRegistrationStageName(stageName);
+            startTime = System.currentTimeMillis();
+            final byte[] encryptedByteArray = getPakcetFromDMZ(regEntity.getPacketId(),registrationId);
             regProcLogger.info("THAM - PacketUpload - Get Packet from DMZ for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-                if (encryptedByteArray != null) {
+            if (encryptedByteArray != null) {
 
-                    if (validateHashCode(new ByteArrayInputStream(encryptedByteArray), regEntity, registrationId, dto,
-                            description)) {
-                        InputStream decryptedPacket = decryptor.decrypt(
-                                registrationId,
-                                utility.getRefId(registrationId, regEntity.getReferenceId()),
-                                new ByteArrayInputStream(encryptedByteArray));
-                        regProcLogger.info("THAM - PacketUpload - Performing Decryption for packet for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                if (validateHashCode(new ByteArrayInputStream(encryptedByteArray), regEntity, registrationId, dto,
+                        description)) {
+                    InputStream decryptedPacket = decryptor.decrypt(
+                            registrationId,
+                            utility.getRefId(registrationId, regEntity.getReferenceId()),
+                            new ByteArrayInputStream(encryptedByteArray));
+                    regProcLogger.info("THAM - PacketUpload - Performing Decryption for packet for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-                        final byte[] decryptedPacketBytes = IOUtils.toByteArray(decryptedPacket);
-                        Map<String, InputStream> fileMap = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
-                        regProcLogger.info("THAM - PacketUpload - Unzip and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                    final byte[] decryptedPacketBytes = IOUtils.toByteArray(decryptedPacket);
+                    Map<String, InputStream> fileMap = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
+                    regProcLogger.info("THAM - PacketUpload - Unzip and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-                        if (scanFile(encryptedByteArray, registrationId,
-                                regEntity.getReferenceId(), fileMap, dto, description, messageDTO)) {
+                    if (scanFile(encryptedByteArray, registrationId,
+                            regEntity.getReferenceId(), fileMap, dto, description, messageDTO)) {
+                        regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+
+                        int retrycount = (dto.getRetryCount() == null) ? 0 : dto.getRetryCount() + 1;
+                        dto.setRetryCount(retrycount);
+                        if (retrycount < getMaxRetryCount()) {
+                            Map<String, InputStream> fileMap1 = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
+                            regProcLogger.info("THAM - PacketUpload - Unzip 2nd Time and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
+                            messageDTO = uploadPacket(regEntity, dto, fileMap1, messageDTO, description);
                             regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
 
-                            int retrycount = (dto.getRetryCount() == null) ? 0 : dto.getRetryCount() + 1;
-                            dto.setRetryCount(retrycount);
-                            if (retrycount < getMaxRetryCount()) {
-                                Map<String, InputStream> fileMap1 = ZipUtils.unzipAndGetFiles(new ByteArrayInputStream(decryptedPacketBytes));
-                                regProcLogger.info("THAM - PacketUpload - Unzip 2nd Time and get Files for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
-                                messageDTO = uploadPacket(regEntity, dto, fileMap1, messageDTO, description);
-                                regProcLogger.info("THAM - PacketUpload - Scan File before Processding for RID : " + registrationId + " in " + (System.currentTimeMillis()-startTime) + " ms");
-
-                                if (messageDTO.getIsValid()) {
-                                    dto.setLatestTransactionStatusCode(
-                                            RegistrationTransactionStatusCode.SUCCESS.toString());
-                                    isTransactionSuccessful = true;
-                                    description.setMessage(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER.getMessage());
-                                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-                                            LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
-                                            description.getMessage());
-
-                                }
-                            } else {
-
-                                messageDTO.setInternalError(Boolean.TRUE);
-                                description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_RETRY_CNT_FAILURE.getMessage());
-                                description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_RETRY_CNT_FAILURE.getCode());
-                                dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                                        .getStatusCode(RegistrationExceptionTypeCode.PACKET_UPLOAD_FAILED_ON_MAX_RETRY_CNT));
-                                dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
-                                dto.setStatusComment(StatusUtil.PACKET_RETRY_CNT_EXCEEDED.getMessage());
-                                dto.setSubStatusCode(StatusUtil.PACKET_RETRY_CNT_EXCEEDED.getCode());
-                                dto.setUpdatedBy(USER);
+                            if (messageDTO.getIsValid()) {
+                                dto.setLatestTransactionStatusCode(
+                                        RegistrationTransactionStatusCode.SUCCESS.toString());
+                                isTransactionSuccessful = true;
+                                description.setMessage(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER.getMessage());
                                 regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
                                         LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
                                         description.getMessage());
+
                             }
+                        } else {
+
+                            messageDTO.setInternalError(Boolean.TRUE);
+                            description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_RETRY_CNT_FAILURE.getMessage());
+                            description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_RETRY_CNT_FAILURE.getCode());
+                            dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+                                    .getStatusCode(RegistrationExceptionTypeCode.PACKET_UPLOAD_FAILED_ON_MAX_RETRY_CNT));
+                            dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+                            dto.setStatusComment(StatusUtil.PACKET_RETRY_CNT_EXCEEDED.getMessage());
+                            dto.setSubStatusCode(StatusUtil.PACKET_RETRY_CNT_EXCEEDED.getCode());
+                            dto.setUpdatedBy(USER);
+                            regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                                    LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+                                    description.getMessage());
                         }
                     }
-                } else {
-                    messageDTO.setInternalError(Boolean.TRUE);
-
-                    dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                            .getStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION));
-                    dto.setStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION.toString());
-                    dto.setStatusComment(StatusUtil.PACKET_NOT_FOUND_LANDING_ZONE.getMessage());
-                    dto.setSubStatusCode(StatusUtil.PACKET_NOT_FOUND_LANDING_ZONE.getCode());
-                    dto.setUpdatedBy(USER);
-                    description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getMessage());
-                    description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getCode());
                 }
-            } catch (TablenotAccessibleException e) {
+            } else {
+                messageDTO.setInternalError(Boolean.TRUE);
+
+                 dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+                         .getStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION));
+                 dto.setStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION.toString());
+                 dto.setStatusComment(StatusUtil.PACKET_NOT_FOUND_LANDING_ZONE.getMessage());
+                 dto.setSubStatusCode(StatusUtil.PACKET_NOT_FOUND_LANDING_ZONE.getCode());
+                 dto.setUpdatedBy(USER);
+                 description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getMessage());
+                 description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getCode());
+             }
+        } catch (TablenotAccessibleException e) {
+                messageDTO.setInternalError(Boolean.TRUE);
+            dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+                    .getStatusCode(RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION));
+            dto.setStatusComment(
+                    trimExpMessage.trimExceptionMessage(StatusUtil.DB_NOT_ACCESSIBLE.getMessage() + e.getMessage()));
+            dto.setSubStatusCode(StatusUtil.DB_NOT_ACCESSIBLE.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.name()
+                            + ExceptionUtils.getStackTrace(e));
+
+            description.setMessage(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getMessage());
+            description.setCode(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getCode());
+
+        } catch (PacketNotFoundException ex) {
+            if (!isPacketAlreadyPresentInObjectStore(messageDTO.getRid(), messageDTO.getReg_type())) {
                 messageDTO.setInternalError(Boolean.TRUE);
                 dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                        .getStatusCode(RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION));
-                dto.setStatusComment(
-                        trimExpMessage.trimExceptionMessage(StatusUtil.DB_NOT_ACCESSIBLE.getMessage() + e.getMessage()));
-                dto.setSubStatusCode(StatusUtil.DB_NOT_ACCESSIBLE.getCode());
-                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                        registrationId, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.name()
-                                + ExceptionUtils.getStackTrace(e));
-
-                description.setMessage(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getMessage());
-                description.setCode(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getCode());
-
-            } catch (PacketNotFoundException ex) {
-                if (!isPacketAlreadyPresentInObjectStore(messageDTO.getRid(), messageDTO.getReg_type())) {
-                    messageDTO.setInternalError(Boolean.TRUE);
-                    dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                            .getStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION));
-                    dto.setStatusComment(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION.toString());
-                    dto.setSubStatusCode(StatusUtil.PACKET_NOT_FOUND_PACKET_STORE.getCode());
-                    regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                            registrationId,
-                            PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.name() + ExceptionUtils.getStackTrace(ex));
-                    description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getMessage());
-                    description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getCode());
-                } else {
-                    regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-                            LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
-                            "Packet is not present in LANDING_ZONE but alrady present in object store. Hence this request will be marked as success.");
-                    messageDTO.setInternalError(false);
-                    messageDTO.setIsValid(true);
-                    isTransactionSuccessful = true;
-                    dto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
-                    dto.setStatusComment(StatusUtil.PACKET_ALREADY_UPLOADED.getMessage());
-                    dto.setSubStatusCode(StatusUtil.PACKET_ALREADY_UPLOADED.getCode());
-                    dto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
-                    description.setMessage(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER_ALREADY_UPLOADED.getMessage());
-                    description.setCode(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER_ALREADY_UPLOADED.getCode());
-                }
-
-            } catch (ApisResourceAccessException e) {
-                messageDTO.setInternalError(Boolean.TRUE);
-                dto.setLatestTransactionStatusCode(
-                        registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.NGINX_ACCESS_EXCEPTION));
-                dto.setStatusComment(trimExpMessage
-                        .trimExceptionMessage(StatusUtil.NGINX_ACCESS_EXCEPTION.getMessage() + e.getMessage()));
-                dto.setSubStatusCode(StatusUtil.IO_EXCEPTION.getCode());
+                        .getStatusCode(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION));
+                dto.setStatusComment(RegistrationExceptionTypeCode.PACKET_NOT_FOUND_EXCEPTION.toString());
+                dto.setSubStatusCode(StatusUtil.PACKET_NOT_FOUND_PACKET_STORE.getCode());
                 regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
                         registrationId,
-                        PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.name() + ExceptionUtils.getStackTrace(e));
+                        PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.name() + ExceptionUtils.getStackTrace(ex));
+                description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getMessage());
+                description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_NOT_FOUND_EXCEPTION.getCode());
+            } else {
+                regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+                        LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+                        "Packet is not present in LANDING_ZONE but alrady present in object store. Hence this request will be marked as success.");
+                messageDTO.setInternalError(false);
+                messageDTO.setIsValid(true);
+                isTransactionSuccessful = true;
+                dto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+                dto.setStatusComment(StatusUtil.PACKET_ALREADY_UPLOADED.getMessage());
+                dto.setSubStatusCode(StatusUtil.PACKET_ALREADY_UPLOADED.getCode());
+                dto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
+                description.setMessage(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER_ALREADY_UPLOADED.getMessage());
+                description.setCode(PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER_ALREADY_UPLOADED.getCode());
+            }
 
-                description.setMessage(PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.getMessage());
-                description.setCode(PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.getCode());
-            } catch (IOException | NoSuchAlgorithmException e) {
+        } catch (ApisResourceAccessException e) {
                 messageDTO.setInternalError(Boolean.TRUE);
-                dto.setLatestTransactionStatusCode(
-                        registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.IOEXCEPTION));
-                dto.setStatusComment(
-                        trimExpMessage.trimExceptionMessage(StatusUtil.IO_EXCEPTION.getMessage() + e.getMessage()));
-                dto.setSubStatusCode(StatusUtil.IO_EXCEPTION.getCode());
-                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                        registrationId,
-                        PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.name() + ExceptionUtils.getStackTrace(e));
-                description.setMessage(PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.getMessage());
-                description.setCode(PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.getCode());
+            dto.setLatestTransactionStatusCode(
+                    registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.NGINX_ACCESS_EXCEPTION));
+            dto.setStatusComment(trimExpMessage
+                    .trimExceptionMessage(StatusUtil.NGINX_ACCESS_EXCEPTION.getMessage() + e.getMessage()));
+            dto.setSubStatusCode(StatusUtil.IO_EXCEPTION.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId,
+                    PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.name() + ExceptionUtils.getStackTrace(e));
 
-            } catch (PacketDecryptionFailureException e) {
+            description.setMessage(PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.getMessage());
+            description.setCode(PlatformErrorMessages.RPR_PUM_NGINX_ACCESS_FAILED.getCode());
+        } catch (IOException | NoSuchAlgorithmException e) {
                 messageDTO.setInternalError(Boolean.TRUE);
-                dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
-                dto.setStatusComment(StatusUtil.PACKET_DECRYPTION_FAILED.getMessage());
-                dto.setSubStatusCode(StatusUtil.PACKET_DECRYPTION_FAILED.getCode());
-                dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                        .getStatusCode(RegistrationExceptionTypeCode.PACKET_DECRYPTION_FAILURE_EXCEPTION));
-                description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_DECRYPTION_FAILED.getMessage());
-                description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_DECRYPTION_FAILED.getCode());
-                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                        registrationId, ExceptionUtils.getStackTrace(e));
+            dto.setLatestTransactionStatusCode(
+                    registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.IOEXCEPTION));
+            dto.setStatusComment(
+                    trimExpMessage.trimExceptionMessage(StatusUtil.IO_EXCEPTION.getMessage() + e.getMessage()));
+            dto.setSubStatusCode(StatusUtil.IO_EXCEPTION.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId,
+                    PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.name() + ExceptionUtils.getStackTrace(e));
+            description.setMessage(PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.getMessage());
+            description.setCode(PlatformErrorMessages.RPR_SYS_IO_EXCEPTION.getCode());
 
-            } catch (ObjectStoreNotAccessibleException e) {
+        } catch (PacketDecryptionFailureException e) {
                 messageDTO.setInternalError(Boolean.TRUE);
-                dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
-                dto.setStatusComment(StatusUtil.OBJECT_STORE_EXCEPTION.getMessage());
-                dto.setSubStatusCode(StatusUtil.OBJECT_STORE_EXCEPTION.getCode());
-                dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-                        .getStatusCode(RegistrationExceptionTypeCode.OBJECT_STORE_EXCEPTION));
-                description.setMessage(PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.getMessage());
-                description.setCode(PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.getCode());
-                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                        registrationId, PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.name()
-                                + ExceptionUtils.getStackTrace(e));
-            } catch (Exception e) {
+            dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+            dto.setStatusComment(StatusUtil.PACKET_DECRYPTION_FAILED.getMessage());
+            dto.setSubStatusCode(StatusUtil.PACKET_DECRYPTION_FAILED.getCode());
+            dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+                    .getStatusCode(RegistrationExceptionTypeCode.PACKET_DECRYPTION_FAILURE_EXCEPTION));
+            description.setMessage(PlatformErrorMessages.RPR_PUM_PACKET_DECRYPTION_FAILED.getMessage());
+            description.setCode(PlatformErrorMessages.RPR_PUM_PACKET_DECRYPTION_FAILED.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId, ExceptionUtils.getStackTrace(e));
+
+        } catch (ObjectStoreNotAccessibleException e) {
                 messageDTO.setInternalError(Boolean.TRUE);
-                dto.setLatestTransactionStatusCode(
-                        registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.EXCEPTION));
-                dto.setStatusComment(trimExpMessage
-                        .trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + e.getMessage()));
-                dto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
-                regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-                        registrationId,
-                        PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.name() + ExceptionUtils.getStackTrace(e));
-                description.setMessage(PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.getMessage());
-                description.setCode(PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.getCode());
+            dto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+            dto.setStatusComment(StatusUtil.OBJECT_STORE_EXCEPTION.getMessage());
+            dto.setSubStatusCode(StatusUtil.OBJECT_STORE_EXCEPTION.getCode());
+            dto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+                    .getStatusCode(RegistrationExceptionTypeCode.OBJECT_STORE_EXCEPTION));
+            description.setMessage(PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.getMessage());
+            description.setCode(PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId, PlatformErrorMessages.OBJECT_STORE_NOT_ACCESSIBLE.name()
+                            + ExceptionUtils.getStackTrace(e));
+        } catch (Exception e) {
+                messageDTO.setInternalError(Boolean.TRUE);
+            dto.setLatestTransactionStatusCode(
+                    registrationStatusMapperUtil.getStatusCode(RegistrationExceptionTypeCode.EXCEPTION));
+            dto.setStatusComment(trimExpMessage
+                    .trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + e.getMessage()));
+            dto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
+            regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+                    registrationId,
+                    PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.name() + ExceptionUtils.getStackTrace(e));
+            description.setMessage(PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.getMessage());
+            description.setCode(PlatformErrorMessages.RPR_PKR_UNKNOWN_EXCEPTION.getCode());
 
-            } finally {
-                if (messageDTO.getInternalError()) {
-                    updateErrorFlags(dto, messageDTO);
-                }
-                /** Module-Id can be Both Success/Error code */
-                String moduleId = isTransactionSuccessful ? PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER.getCode()
-                        : description.getCode();
-                String moduleName = ModuleName.PACKET_UPLOAD.toString();
-                registrationStatusService.updateRegistrationStatus(dto, moduleId, moduleName);
-                String eventId = "";
-                String eventName = "";
-                String eventType = "";
-                eventId = isTransactionSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
-                eventName = eventId.equalsIgnoreCase(EventId.RPR_402.toString()) ? EventName.UPDATE.toString()
-                        : EventName.EXCEPTION.toString();
-                eventType = eventId.equalsIgnoreCase(EventId.RPR_402.toString()) ? EventType.BUSINESS.toString()
-                        : EventType.SYSTEM.toString();
+        } finally {
+            if (messageDTO.getInternalError()) {
+                updateErrorFlags(dto, messageDTO);
+            }
+            /** Module-Id can be Both Success/Error code */
+            String moduleId = isTransactionSuccessful ? PlatformSuccessMessages.RPR_PUM_PACKET_UPLOADER.getCode()
+                    : description.getCode();
+            String moduleName = ModuleName.PACKET_UPLOAD.toString();
+            registrationStatusService.updateRegistrationStatus(dto, moduleId, moduleName);
+            String eventId = "";
+            String eventName = "";
+            String eventType = "";
+            eventId = isTransactionSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
+            eventName = eventId.equalsIgnoreCase(EventId.RPR_402.toString()) ? EventName.UPDATE.toString()
+                    : EventName.EXCEPTION.toString();
+            eventType = eventId.equalsIgnoreCase(EventId.RPR_402.toString()) ? EventType.BUSINESS.toString()
+                    : EventType.SYSTEM.toString();
 
-                auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
-                        moduleId, moduleName, registrationId);
+            auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
+                    moduleId, moduleName, registrationId);
 
         }
 

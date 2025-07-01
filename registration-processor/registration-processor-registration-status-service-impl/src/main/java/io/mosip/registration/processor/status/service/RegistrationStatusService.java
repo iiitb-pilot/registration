@@ -163,4 +163,5 @@ public interface RegistrationStatusService<T, U, D> {
 	public void updateRegistrationStatusForWorkflow(U registrationStatusDto, String moduleId, String moduleName);
 
 	public List<InternalRegistrationStatusDto> getResumablePackets(Integer fetchSize);
+
 }

@@ -230,7 +230,6 @@ public class MosipActiveMqImpl implements MosipQueueManager<MosipQueue, byte[]> 
                 }
             });
         }
-
         regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(),
                 "", "MosipActiveMqImpl::consume()::exit");
 

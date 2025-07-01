@@ -108,16 +108,6 @@ public class InternalRegistrationStatusDto implements Serializable {
 
 	private String workflowInstanceId;
 
-	private String latestTransactionFlowId;
-
-	public String getLatestTransactionFlowId() {
-		return latestTransactionFlowId;
-	}
-
-	public void setLatestTransactionFlowId(String latestTransactionFlowId) {
-		this.latestTransactionFlowId = latestTransactionFlowId;
-	}
-
 	/**
 	 * Gets the ref id.
 	 *

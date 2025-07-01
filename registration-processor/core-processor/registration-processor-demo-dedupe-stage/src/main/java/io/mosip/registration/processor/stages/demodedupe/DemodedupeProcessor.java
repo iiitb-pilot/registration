@@ -165,131 +165,131 @@ public class DemodedupeProcessor {
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService
 				.getRegistrationStatus(registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
 
-			try {
+		try {
 
-				IndividualDemographicDedupe demographicData = packetInfoManager.
-						getIdentityKeysAndFetchValuesFromJSON(registrationId, registrationStatusDto.getRegistrationType(), ProviderStageName.DEMO_DEDUPE);
+			IndividualDemographicDedupe demographicData = packetInfoManager.
+					getIdentityKeysAndFetchValuesFromJSON(registrationId, registrationStatusDto.getRegistrationType(), ProviderStageName.DEMO_DEDUPE);
 
-				JSONObject regProcessorIdentityJson = utility.getRegistrationProcessorMappingJson(MappingJsonConstants.IDENTITY);
-				String uinFieldCheck = utility.getUIn(registrationId, registrationStatusDto.getRegistrationType(), ProviderStageName.DEMO_DEDUPE);
-				JSONObject jsonObject = utility.retrieveIdrepoJson(uinFieldCheck);
-				if (jsonObject == null) {
-					DemoDedupeStatusDTO demoDedupeStatusDTO = insertDemodedupDetailsAndPerformDedup(demographicData, registrationStatusDto,
-							duplicateDtos, object, moduleId, moduleName, isDemoDedupeSkip, description);
-					isTransactionSuccessful=demoDedupeStatusDTO.isTransactionSuccessful();
-					duplicateDtos=demoDedupeStatusDTO.getDuplicateDtos();
-				} else {
-					insertDemodedupDetails(demographicData, regProcessorIdentityJson, jsonObject, registrationStatusDto,
-							object, moduleId, moduleName);
-				}
-				if (abisHandlerUtil.getPacketStatus(registrationStatusDto)
-						.equalsIgnoreCase(AbisConstant.DUPLICATE_FOR_SAME_TRANSACTION_ID))
-					isDuplicateRequestForSameTransactionId = true;
-
-				registrationStatusDto.setRegistrationStageName(stageName);
-				if (isTransactionSuccessful) {
-					object.setIsValid(Boolean.TRUE);
-				}
-
-			} catch (FSAdapterException e) {
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.name());
-				registrationStatusDto.setStatusComment(trimExceptionMessage
-						.trimExceptionMessage(StatusUtil.OBJECT_STORE_EXCEPTION.getMessage() + e.getMessage()));
-				registrationStatusDto.setSubStatusCode(StatusUtil.OBJECT_STORE_EXCEPTION.getCode());
-				registrationStatusDto.setLatestTransactionStatusCode(
-						registrationExceptionMapperUtil.getStatusCode(RegistrationExceptionTypeCode.OBJECT_STORE_EXCEPTION));
-				description.setCode(PlatformErrorMessages.PACKET_DEMO_PACKET_STORE_NOT_ACCESSIBLE.getCode());
-				description.setMessage(PlatformErrorMessages.PACKET_DEMO_PACKET_STORE_NOT_ACCESSIBLE.getMessage());
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
-						description.getMessage() + ExceptionUtils.getStackTrace(e));
-				object.setInternalError(Boolean.TRUE);
-			} catch (IllegalArgumentException e) {
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.name());
-				registrationStatusDto.setStatusComment(trimExceptionMessage
-						.trimExceptionMessage(StatusUtil.IIEGAL_ARGUMENT_EXCEPTION.getMessage() + e.getMessage()));
-				registrationStatusDto.setSubStatusCode(StatusUtil.IIEGAL_ARGUMENT_EXCEPTION.getCode());
-				registrationStatusDto.setLatestTransactionStatusCode(registrationExceptionMapperUtil
-						.getStatusCode(RegistrationExceptionTypeCode.ILLEGAL_ARGUMENT_EXCEPTION));
-				description.setCode(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getCode());
-				description.setMessage(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getMessage());
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
-						description.getMessage() + ExceptionUtils.getStackTrace(e));
-				object.setInternalError(Boolean.TRUE);
-			} catch (ApisResourceAccessException e) {
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.name());
-				registrationStatusDto.setStatusComment(
-						trimExceptionMessage.trimExceptionMessage(StatusUtil.API_RESOUCE_ACCESS_FAILED + e.getMessage()));
-				registrationStatusDto.setSubStatusCode(StatusUtil.API_RESOUCE_ACCESS_FAILED.getCode());
-				registrationStatusDto.setLatestTransactionStatusCode(registrationExceptionMapperUtil
-						.getStatusCode(RegistrationExceptionTypeCode.APIS_RESOURCE_ACCESS_EXCEPTION));
-				description.setCode(PlatformErrorMessages.RPR_DEMO_API_RESOUCE_ACCESS_FAILED.getCode());
-				description.setMessage(PlatformErrorMessages.RPR_DEMO_API_RESOUCE_ACCESS_FAILED.getMessage());
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
-						description.getCode() + " -- " + LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
-						description + "\n" + ExceptionUtils.getStackTrace(e));
-				object.setInternalError(Boolean.TRUE);
-			} catch (Exception ex) {
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.name());
-				registrationStatusDto.setStatusComment(trimExceptionMessage
-						.trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + ex.getMessage()));
-				registrationStatusDto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
-				registrationStatusDto.setLatestTransactionStatusCode(
-						registrationExceptionMapperUtil.getStatusCode(RegistrationExceptionTypeCode.EXCEPTION));
-				description.setCode(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getCode());
-				description.setMessage(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getMessage());
-				regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
-						description.getMessage() + ExceptionUtils.getStackTrace(ex));
-				object.setInternalError(Boolean.TRUE);
-			} finally {
-				if (!isDuplicateRequestForSameTransactionId) {
-					registrationStatusDto
-							.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.DEMOGRAPHIC_VERIFICATION.toString());
-					moduleId = isTransactionSuccessful ? PlatformSuccessMessages.RPR_PKR_DEMO_DE_DUP.getCode()
-							: description.getCode();
-
-					registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
-					try {
-						if (isMatchFound) {
-							saveDuplicateDtoList(duplicateDtos, registrationStatusDto, object);
-						}
-					} catch (Exception e) {
-						registrationStatusDto.setRegistrationStageName(stageName);
-						registrationStatusDto
-								.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.REPROCESS.toString());
-						registrationStatusDto.setStatusComment(trimExceptionMessage
-								.trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + e.getMessage()));
-						registrationStatusDto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
-						description.setMessage(DemoDedupeConstants.NO_DATA_IN_DEMO);
-						registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
-
-						regProcLogger.error(DemoDedupeConstants.NO_DATA_IN_DEMO, "", "", ExceptionUtils.getStackTrace(e));
-						object.setMessageBusAddress(MessageBusAddress.DEMO_DEDUPE_BUS_IN);
-						object.setInternalError(Boolean.TRUE);
-					}
-
-					if (object.getInternalError()) {
-						updateErrorFlags(registrationStatusDto, object);
-					}
-					if (object.getIsValid() && !object.getInternalError())
-						regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-								LoggerFileConstant.REGISTRATIONID.toString(), registrationId, "DemoDedupeProcessor::success");
-					else
-						regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-								LoggerFileConstant.REGISTRATIONID.toString(), registrationId, "DemoDedupeProcessor::failure");
-
-					String eventId = isTransactionSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
-					String eventName = isTransactionSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
-					String eventType = isTransactionSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
-
-					auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
-							moduleId, moduleName, registrationId);
-				} else {
-					regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
-							registrationId, "Duplicate request received for same latest transaction id. This will be ignored.");
-					object.setIsValid(false);
-					object.setInternalError(true);
-				}
+			JSONObject regProcessorIdentityJson = utility.getRegistrationProcessorMappingJson(MappingJsonConstants.IDENTITY);
+			String uinFieldCheck = utility.getUIn(registrationId, registrationStatusDto.getRegistrationType(), ProviderStageName.DEMO_DEDUPE);
+			JSONObject jsonObject = utility.retrieveIdrepoJson(uinFieldCheck);
+			if (jsonObject == null) {
+				DemoDedupeStatusDTO demoDedupeStatusDTO = insertDemodedupDetailsAndPerformDedup(demographicData, registrationStatusDto,
+						duplicateDtos, object, moduleId, moduleName, isDemoDedupeSkip, description);
+				isTransactionSuccessful=demoDedupeStatusDTO.isTransactionSuccessful();
+				duplicateDtos=demoDedupeStatusDTO.getDuplicateDtos();
+			} else {
+				insertDemodedupDetails(demographicData, regProcessorIdentityJson, jsonObject, registrationStatusDto,
+						object, moduleId, moduleName);
 			}
+			if (abisHandlerUtil.getPacketStatus(registrationStatusDto)
+					.equalsIgnoreCase(AbisConstant.DUPLICATE_FOR_SAME_TRANSACTION_ID))
+				isDuplicateRequestForSameTransactionId = true;
+
+			registrationStatusDto.setRegistrationStageName(stageName);
+			if (isTransactionSuccessful) {
+				object.setIsValid(Boolean.TRUE);
+			}
+
+		} catch (FSAdapterException e) {
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.name());
+			registrationStatusDto.setStatusComment(trimExceptionMessage
+					.trimExceptionMessage(StatusUtil.OBJECT_STORE_EXCEPTION.getMessage() + e.getMessage()));
+			registrationStatusDto.setSubStatusCode(StatusUtil.OBJECT_STORE_EXCEPTION.getCode());
+			registrationStatusDto.setLatestTransactionStatusCode(
+					registrationExceptionMapperUtil.getStatusCode(RegistrationExceptionTypeCode.OBJECT_STORE_EXCEPTION));
+			description.setCode(PlatformErrorMessages.PACKET_DEMO_PACKET_STORE_NOT_ACCESSIBLE.getCode());
+			description.setMessage(PlatformErrorMessages.PACKET_DEMO_PACKET_STORE_NOT_ACCESSIBLE.getMessage());
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
+					description.getMessage() + ExceptionUtils.getStackTrace(e));
+			object.setInternalError(Boolean.TRUE);
+		} catch (IllegalArgumentException e) {
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.name());
+			registrationStatusDto.setStatusComment(trimExceptionMessage
+					.trimExceptionMessage(StatusUtil.IIEGAL_ARGUMENT_EXCEPTION.getMessage() + e.getMessage()));
+			registrationStatusDto.setSubStatusCode(StatusUtil.IIEGAL_ARGUMENT_EXCEPTION.getCode());
+			registrationStatusDto.setLatestTransactionStatusCode(registrationExceptionMapperUtil
+					.getStatusCode(RegistrationExceptionTypeCode.ILLEGAL_ARGUMENT_EXCEPTION));
+			description.setCode(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getCode());
+			description.setMessage(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getMessage());
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
+					description.getMessage() + ExceptionUtils.getStackTrace(e));
+			object.setInternalError(Boolean.TRUE);
+		} catch (ApisResourceAccessException e) {
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.name());
+			registrationStatusDto.setStatusComment(
+					trimExceptionMessage.trimExceptionMessage(StatusUtil.API_RESOUCE_ACCESS_FAILED + e.getMessage()));
+			registrationStatusDto.setSubStatusCode(StatusUtil.API_RESOUCE_ACCESS_FAILED.getCode());
+			registrationStatusDto.setLatestTransactionStatusCode(registrationExceptionMapperUtil
+					.getStatusCode(RegistrationExceptionTypeCode.APIS_RESOURCE_ACCESS_EXCEPTION));
+			description.setCode(PlatformErrorMessages.RPR_DEMO_API_RESOUCE_ACCESS_FAILED.getCode());
+			description.setMessage(PlatformErrorMessages.RPR_DEMO_API_RESOUCE_ACCESS_FAILED.getMessage());
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(),
+					description.getCode() + " -- " + LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+					description + "\n" + ExceptionUtils.getStackTrace(e));
+			object.setInternalError(Boolean.TRUE);
+		} catch (Exception ex) {
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.name());
+			registrationStatusDto.setStatusComment(trimExceptionMessage
+					.trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + ex.getMessage()));
+			registrationStatusDto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
+			registrationStatusDto.setLatestTransactionStatusCode(
+					registrationExceptionMapperUtil.getStatusCode(RegistrationExceptionTypeCode.EXCEPTION));
+			description.setCode(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getCode());
+			description.setMessage(PlatformErrorMessages.PACKET_DEMO_DEDUPE_FAILED.getMessage());
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), description.getCode(), registrationId,
+					description.getMessage() + ExceptionUtils.getStackTrace(ex));
+			object.setInternalError(Boolean.TRUE);
+		} finally {
+			if (!isDuplicateRequestForSameTransactionId) {
+			registrationStatusDto
+					.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.DEMOGRAPHIC_VERIFICATION.toString());
+			moduleId = isTransactionSuccessful ? PlatformSuccessMessages.RPR_PKR_DEMO_DE_DUP.getCode()
+					: description.getCode();
+
+			registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+			try {
+				if (isMatchFound) {
+					saveDuplicateDtoList(duplicateDtos, registrationStatusDto, object);
+				}
+			} catch (Exception e) {
+				registrationStatusDto.setRegistrationStageName(stageName);
+				registrationStatusDto
+						.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.REPROCESS.toString());
+				registrationStatusDto.setStatusComment(trimExceptionMessage
+						.trimExceptionMessage(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getMessage() + e.getMessage()));
+				registrationStatusDto.setSubStatusCode(StatusUtil.UNKNOWN_EXCEPTION_OCCURED.getCode());
+				description.setMessage(DemoDedupeConstants.NO_DATA_IN_DEMO);
+				registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+
+				regProcLogger.error(DemoDedupeConstants.NO_DATA_IN_DEMO, "", "", ExceptionUtils.getStackTrace(e));
+				object.setMessageBusAddress(MessageBusAddress.DEMO_DEDUPE_BUS_IN);
+				object.setInternalError(Boolean.TRUE);
+			}
+
+			if (object.getInternalError()) {
+				updateErrorFlags(registrationStatusDto, object);
+			}
+			if (object.getIsValid() && !object.getInternalError())
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+						LoggerFileConstant.REGISTRATIONID.toString(), registrationId, "DemoDedupeProcessor::success");
+			else
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+						LoggerFileConstant.REGISTRATIONID.toString(), registrationId, "DemoDedupeProcessor::failure");
+
+			String eventId = isTransactionSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
+			String eventName = isTransactionSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
+			String eventType = isTransactionSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
+
+			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
+					moduleId, moduleName, registrationId);
+		} else {
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					registrationId, "Duplicate request received for same latest transaction id. This will be ignored.");
+			object.setIsValid(false);
+			object.setInternalError(true);
+			 }
+		}
 
 		return object;
 	}

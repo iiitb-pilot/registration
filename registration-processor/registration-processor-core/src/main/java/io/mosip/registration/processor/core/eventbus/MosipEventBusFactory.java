@@ -90,9 +90,7 @@ public class MosipEventBusFactory {
 	}
 
     public String getMaxPollIntervals(String propertyPrefix) {
-    //    return propertiesUtil.getProperty(propertyPrefix + EVENTBUS_KAFKA_MAX_POLL_INTERVALS, String.class, "300000");
         return propertiesUtil.getProperty(EVENTBUS_KAFKA_MAX_POLL_INTERVALS, String.class, "300000");
-
     }
 
 	public int getPollFrequency(String propertyPrefix) {

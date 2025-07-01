@@ -120,127 +120,127 @@ public class CMDValidationProcessor {
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService
 				.getRegistrationStatus(registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
 
-			registrationStatusDto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.CMD_VALIDATION.toString());
-			registrationStatusDto.setRegistrationStageName(stageName);
-			try {
+		registrationStatusDto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.CMD_VALIDATION.toString());
+		registrationStatusDto.setRegistrationStageName(stageName);
+		try {
 
-				Map<String, String> metaInfo = packetManagerService.getMetaInfo(registrationId,
-						registrationStatusDto.getRegistrationType(), ProviderStageName.CMD_VALIDATOR);
+			Map<String, String> metaInfo = packetManagerService.getMetaInfo(registrationId,
+					registrationStatusDto.getRegistrationType(), ProviderStageName.CMD_VALIDATOR);
 
-				RegOsiDto regOsi = osiUtils.getOSIDetailsFromMetaInfo(metaInfo);
+			RegOsiDto regOsi = osiUtils.getOSIDetailsFromMetaInfo(metaInfo);
 
-				if ((gpsEnable.equalsIgnoreCase(GLOBAL_CONFIG_TRUE_VALUE))
-						&& (regOsi.getLatitude() == null || regOsi.getLongitude() == null
-						|| regOsi.getLatitude().trim().isEmpty() || regOsi.getLongitude().trim().isEmpty())) {
-					registrationStatusDto.setStatusComment(StatusUtil.GPS_DETAILS_NOT_FOUND.getMessage());
-					registrationStatusDto.setSubStatusCode(StatusUtil.GPS_DETAILS_NOT_FOUND.getCode());
-					object.setIsValid(Boolean.FALSE);
-					int retryCount = registrationStatusDto.getRetryCount() != null
-							? registrationStatusDto.getRetryCount() + 1
-							: 1;
-					registrationStatusDto.setLatestTransactionStatusCode(registrationStatusMapperUtil
-							.getStatusCode(RegistrationExceptionTypeCode.PACKET_CMD_VALIDATION_FAILED));
-					registrationStatusDto.setRetryCount(retryCount);
-					registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
-					registrationStatusDto.setUpdatedBy(USER);
-
-					description.setCode(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getCode());
-					description.setMessage(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getMessage() + registrationId + "::"
-							+ " GPS is not valid");
-					String moduleId = description.getCode();
-					String moduleName = ModuleName.CMD_VALIDATOR.toString();
-					registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
-					updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
-					return object;
-				}
-
-				if (centerValidationProcessList !=null && !centerValidationProcessList.isEmpty() && centerValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
-					centerValidator.validate(getLanguageCode(), regOsi, registrationStatusDto.getRegistrationId());
-				}
-
-				if (machineValidationProcessList !=null && ! machineValidationProcessList.isEmpty() && machineValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
-					machineValidator.validate(regOsi.getMachineId(), getLanguageCode(), regOsi.getPacketCreationDate(),
-							registrationStatusDto.getRegistrationId());
-				}
-
-				if (deviceValidationProcessList !=null && !deviceValidationProcessList.isEmpty() && deviceValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
-					deviceValidator.validate(regOsi,registrationStatusDto.getRegistrationType(), registrationStatusDto.getRegistrationId());
-				}
-
-				registrationStatusDto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
-				registrationStatusDto.setStatusComment(StatusUtil.CMD_VALIDATION_SUCCESS.getMessage());
-				registrationStatusDto.setSubStatusCode(StatusUtil.CMD_VALIDATION_SUCCESS.getCode());
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
-
-				description.setMessage(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getMessage() + " -- " + registrationId);
-				description.setCode(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getCode());
-
-				regProcLogger.debug("process call ended for registration id {} {} {}", registrationId,
-						description.getCode() + description.getMessage());
-
-				object.setIsValid(Boolean.TRUE);
-				object.setInternalError(Boolean.FALSE);
-				isTransactionSuccessful = true;
-			} catch (PacketManagerException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
-						description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
-			} catch (DataAccessException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION, description,
-						PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (ApisResourceAccessException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.API_RESOUCE_ACCESS_FAILED, RegistrationExceptionTypeCode.APIS_RESOURCE_ACCESS_EXCEPTION,
-						description, PlatformErrorMessages.RPR_SYS_API_RESOURCE_EXCEPTION, e);
-			} catch (AuthSystemException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.AUTH_SYSTEM_EXCEPTION, RegistrationExceptionTypeCode.AUTH_SYSTEM_EXCEPTION, description,
-						PlatformErrorMessages.RPR_AUTH_SYSTEM_EXCEPTION, e);
-			} catch (IOException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED, StatusUtil.IO_EXCEPTION,
-						RegistrationExceptionTypeCode.IOEXCEPTION, description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION,
-						e);
-			} catch (ParsingException | JsonProcessingException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION, description,
-						PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
-			} catch (TablenotAccessibleException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
-						description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (ValidationFailedException e) {
-				object.setInternalError(Boolean.FALSE);
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.VALIDATION_FAILED_EXCEPTION, RegistrationExceptionTypeCode.VALIDATION_FAILED_EXCEPTION,
-						description, PlatformErrorMessages.CMD_VALIDATION_FAILED, e);
-			} catch (BaseUncheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
-						description, PlatformErrorMessages.CMD_BASE_UNCHECKED_EXCEPTION, e);
-			} catch (BaseCheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
-						description, PlatformErrorMessages.CMD_BASE_CHECKED_EXCEPTION, e);
-			} catch (Exception e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION, description,
-						PlatformErrorMessages.CMD_VALIDATION_FAILED, e);
-			} finally {
-				if (object.getInternalError()) {
-					int retryCount = registrationStatusDto.getRetryCount() != null
-							? registrationStatusDto.getRetryCount() + 1
-							: 1;
-					registrationStatusDto.setRetryCount(retryCount);
-					updateErrorFlags(registrationStatusDto, object);
-				}
+			if ((gpsEnable.equalsIgnoreCase(GLOBAL_CONFIG_TRUE_VALUE))
+					&& (regOsi.getLatitude() == null || regOsi.getLongitude() == null
+							|| regOsi.getLatitude().trim().isEmpty() || regOsi.getLongitude().trim().isEmpty())) {
+				registrationStatusDto.setStatusComment(StatusUtil.GPS_DETAILS_NOT_FOUND.getMessage());
+				registrationStatusDto.setSubStatusCode(StatusUtil.GPS_DETAILS_NOT_FOUND.getCode());
+				object.setIsValid(Boolean.FALSE);
+				int retryCount = registrationStatusDto.getRetryCount() != null
+						? registrationStatusDto.getRetryCount() + 1
+						: 1;
+				registrationStatusDto.setLatestTransactionStatusCode(registrationStatusMapperUtil
+						.getStatusCode(RegistrationExceptionTypeCode.PACKET_CMD_VALIDATION_FAILED));
+				registrationStatusDto.setRetryCount(retryCount);
+				registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
 				registrationStatusDto.setUpdatedBy(USER);
-				/** Module-Id can be Both Success/Error code */
+
+				description.setCode(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getCode());
+				description.setMessage(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getMessage() + registrationId + "::"
+						+ " GPS is not valid");
 				String moduleId = description.getCode();
 				String moduleName = ModuleName.CMD_VALIDATOR.toString();
 				registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
 				updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+				return object;
 			}
+
+			if (centerValidationProcessList !=null && !centerValidationProcessList.isEmpty() && centerValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
+				centerValidator.validate(getLanguageCode(), regOsi, registrationStatusDto.getRegistrationId());
+			}
+
+			if (machineValidationProcessList !=null && ! machineValidationProcessList.isEmpty() && machineValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
+				machineValidator.validate(regOsi.getMachineId(), getLanguageCode(), regOsi.getPacketCreationDate(),
+						registrationStatusDto.getRegistrationId());
+			}
+
+			if (deviceValidationProcessList !=null && !deviceValidationProcessList.isEmpty() && deviceValidationProcessList.contains(registrationStatusDto.getRegistrationType())) {
+				deviceValidator.validate(regOsi,registrationStatusDto.getRegistrationType(), registrationStatusDto.getRegistrationId());
+			}
+
+			registrationStatusDto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
+			registrationStatusDto.setStatusComment(StatusUtil.CMD_VALIDATION_SUCCESS.getMessage());
+			registrationStatusDto.setSubStatusCode(StatusUtil.CMD_VALIDATION_SUCCESS.getCode());
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+
+			description.setMessage(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getMessage() + " -- " + registrationId);
+			description.setCode(PlatformSuccessMessages.RPR_PKR_CMD_VALIDATE.getCode());
+
+			regProcLogger.debug("process call ended for registration id {} {} {}", registrationId,
+					description.getCode() + description.getMessage());
+
+			object.setIsValid(Boolean.TRUE);
+			object.setInternalError(Boolean.FALSE);
+			isTransactionSuccessful = true;
+		} catch (PacketManagerException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
+					description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
+		} catch (DataAccessException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION, description,
+					PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (ApisResourceAccessException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.API_RESOUCE_ACCESS_FAILED, RegistrationExceptionTypeCode.APIS_RESOURCE_ACCESS_EXCEPTION,
+					description, PlatformErrorMessages.RPR_SYS_API_RESOURCE_EXCEPTION, e);
+		} catch (AuthSystemException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.AUTH_SYSTEM_EXCEPTION, RegistrationExceptionTypeCode.AUTH_SYSTEM_EXCEPTION, description,
+					PlatformErrorMessages.RPR_AUTH_SYSTEM_EXCEPTION, e);
+		} catch (IOException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED, StatusUtil.IO_EXCEPTION,
+					RegistrationExceptionTypeCode.IOEXCEPTION, description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION,
+					e);
+		} catch (ParsingException | JsonProcessingException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION, description,
+					PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
+		} catch (TablenotAccessibleException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
+					description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (ValidationFailedException e) {
+			object.setInternalError(Boolean.FALSE);
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.VALIDATION_FAILED_EXCEPTION, RegistrationExceptionTypeCode.VALIDATION_FAILED_EXCEPTION,
+					description, PlatformErrorMessages.CMD_VALIDATION_FAILED, e);
+		} catch (BaseUncheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
+					description, PlatformErrorMessages.CMD_BASE_UNCHECKED_EXCEPTION, e);
+		} catch (BaseCheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
+					description, PlatformErrorMessages.CMD_BASE_CHECKED_EXCEPTION, e);
+		} catch (Exception e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION, description,
+					PlatformErrorMessages.CMD_VALIDATION_FAILED, e);
+		} finally {
+			if (object.getInternalError()) {
+				int retryCount = registrationStatusDto.getRetryCount() != null
+						? registrationStatusDto.getRetryCount() + 1
+						: 1;
+				registrationStatusDto.setRetryCount(retryCount);
+				updateErrorFlags(registrationStatusDto, object);
+			}
+			registrationStatusDto.setUpdatedBy(USER);
+			/** Module-Id can be Both Success/Error code */
+			String moduleId = description.getCode();
+			String moduleName = ModuleName.CMD_VALIDATOR.toString();
+			registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+			updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+		}
 		return object;
 	}
 

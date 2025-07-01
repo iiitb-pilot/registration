@@ -99,7 +99,7 @@ public class PacketUploaderStage extends MosipVerticleAPIManager {
 	public MessageDTO process(MessageDTO messageDTO) {
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), "",
 				"PacketUploaderStage::processURL()::entry");
-		Long startTime = System.currentTimeMillis();
+
 		messageDTO.setMessageBusAddress(MessageBusAddress.PACKET_UPLOADER_IN);
 		messageDTO.setInternalError(Boolean.FALSE);
 		messageDTO.setIsValid(Boolean.FALSE);
@@ -107,7 +107,6 @@ public class PacketUploaderStage extends MosipVerticleAPIManager {
 
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				"PacketUploaderStage::processURL()::exit", messageDTO.toString());
-		regProcLogger.info("THAM - PacketUploader - Completion of Packet Uploader for RID : " + messageDTO.getRid() + " " + (System.currentTimeMillis() - startTime) + " ms");
 
 		return messageDTO;
 	}

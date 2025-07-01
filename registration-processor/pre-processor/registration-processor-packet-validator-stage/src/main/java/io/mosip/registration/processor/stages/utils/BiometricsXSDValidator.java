@@ -28,8 +28,6 @@ import io.mosip.kernel.cbeffutil.container.impl.CbeffContainerImpl;
 @Component
 public class BiometricsXSDValidator {
 
-    private static Logger regProcLogger = RegProcessorLogger.getLogger(BiometricsXSDValidator.class);
-
     @Value("${mosip.kernel.xsdstorage-uri}")
     private String configServerFileStorageURL;
     
@@ -42,12 +40,8 @@ public class BiometricsXSDValidator {
         if(xsd==null) {
             try (InputStream inputStream = new URL(configServerFileStorageURL + schemaFileName).openStream()) {
                 xsd =  IOUtils.toByteArray(inputStream);
-                regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
-                        LoggerFileConstant.REGISTRATIONID.toString(), "XSD Value is", (new String(xsd, StandardCharsets.UTF_8)));
             }
         }
-        regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
-                LoggerFileConstant.REGISTRATIONID.toString(), "XSD Value Present", (xsd == null ? "false" : "true"));
         CbeffContainerImpl cbeffContainer = new CbeffContainerImpl();
         BIR bir = cbeffContainer.createBIRType(biometricRecord.getSegments());
         CbeffValidator.createXMLBytes(bir, xsd);//validates XSD

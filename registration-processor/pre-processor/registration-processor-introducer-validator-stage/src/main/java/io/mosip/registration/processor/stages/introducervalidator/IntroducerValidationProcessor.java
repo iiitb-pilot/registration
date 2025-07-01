@@ -79,88 +79,88 @@ public class IntroducerValidationProcessor {
 		InternalRegistrationStatusDto registrationStatusDto = registrationStatusService
 				.getRegistrationStatus(registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
 
-			registrationStatusDto
-					.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.INTRODUCER_VALIDATION.toString());
-			registrationStatusDto.setRegistrationStageName(stageName);
-			try {
+		registrationStatusDto
+				.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.INTRODUCER_VALIDATION.toString());
+		registrationStatusDto.setRegistrationStageName(stageName);
+		try {
 
-				introducerValidator.validate(registrationId, registrationStatusDto);
+			introducerValidator.validate(registrationId, registrationStatusDto);
 
-				registrationStatusDto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
-				registrationStatusDto.setStatusComment(StatusUtil.INTRODUCER_VALIDATION_SUCCESS.getMessage());
-				registrationStatusDto.setSubStatusCode(StatusUtil.INTRODUCER_VALIDATION_SUCCESS.getCode());
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+			registrationStatusDto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.SUCCESS.toString());
+			registrationStatusDto.setStatusComment(StatusUtil.INTRODUCER_VALIDATION_SUCCESS.getMessage());
+			registrationStatusDto.setSubStatusCode(StatusUtil.INTRODUCER_VALIDATION_SUCCESS.getCode());
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
 
-				description.setMessage(
-						PlatformSuccessMessages.RPR_PKR_INTRODUCER_VALIDATE.getMessage() + " -- " + registrationId);
-				description.setCode(PlatformSuccessMessages.RPR_PKR_INTRODUCER_VALIDATE.getCode());
+			description.setMessage(
+					PlatformSuccessMessages.RPR_PKR_INTRODUCER_VALIDATE.getMessage() + " -- " + registrationId);
+			description.setCode(PlatformSuccessMessages.RPR_PKR_INTRODUCER_VALIDATE.getCode());
 
-				regProcLogger.info("process call ended for registrationId {} {} {}", registrationId,
-						description.getCode() + description.getMessage());
+			regProcLogger.info("process call ended for registrationId {} {} {}", registrationId,
+					description.getCode() + description.getMessage());
 
-				object.setIsValid(Boolean.TRUE);
-				object.setInternalError(Boolean.FALSE);
-				isTransactionSuccessful = true;
-			} catch (PacketManagerException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
-						description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
-			} catch (IntroducerOnHoldException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.PACKET_ON_HOLD, RegistrationExceptionTypeCode.ON_HOLD_INTRODUCER_PACKET, description,
-						PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
-			} catch (DataAccessException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION, description,
-						PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (AuthSystemException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.AUTH_SYSTEM_EXCEPTION, RegistrationExceptionTypeCode.AUTH_SYSTEM_EXCEPTION, description,
-						PlatformErrorMessages.RPR_AUTH_SYSTEM_EXCEPTION, e);
-			} catch (IOException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED, StatusUtil.IO_EXCEPTION,
-						RegistrationExceptionTypeCode.IOEXCEPTION, description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION,
-						e);
-			} catch (ParsingException | JsonProcessingException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION, description,
-						PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
-			} catch (TablenotAccessibleException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
-						description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (ValidationFailedException e) {
-				object.setInternalError(Boolean.FALSE);
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.VALIDATION_FAILED_EXCEPTION, RegistrationExceptionTypeCode.VALIDATION_FAILED_EXCEPTION,
-						description, PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
-			} catch (BaseUncheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
-						description, PlatformErrorMessages.INTRODUCER_BASE_UNCHECKED_EXCEPTION, e);
-			} catch (BaseCheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
-						description, PlatformErrorMessages.INTRODUCER_BASE_CHECKED_EXCEPTION, e);
-			} catch (Exception e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION, description,
-						PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
-			} finally {
-				if (object.getInternalError()) {
-					int retryCount = registrationStatusDto.getRetryCount() != null
-							? registrationStatusDto.getRetryCount() + 1
-							: 1;
-					registrationStatusDto.setRetryCount(retryCount);
-					updateErrorFlags(registrationStatusDto, object);
-				}
-				registrationStatusDto.setUpdatedBy(USER);
-				/** Module-Id can be Both Success/Error code */
-				String moduleId = description.getCode();
-				String moduleName = ModuleName.INTRODUCER_VALIDATOR.toString();
-				registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
-				updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+			object.setIsValid(Boolean.TRUE);
+			object.setInternalError(Boolean.FALSE);
+			isTransactionSuccessful = true;
+		} catch (PacketManagerException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
+					description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
+		} catch (IntroducerOnHoldException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.PACKET_ON_HOLD, RegistrationExceptionTypeCode.ON_HOLD_INTRODUCER_PACKET, description,
+					PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
+		} catch (DataAccessException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION, description,
+					PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (AuthSystemException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.AUTH_SYSTEM_EXCEPTION, RegistrationExceptionTypeCode.AUTH_SYSTEM_EXCEPTION, description,
+					PlatformErrorMessages.RPR_AUTH_SYSTEM_EXCEPTION, e);
+		} catch (IOException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED, StatusUtil.IO_EXCEPTION,
+					RegistrationExceptionTypeCode.IOEXCEPTION, description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION,
+					e);
+		} catch (ParsingException | JsonProcessingException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION, description,
+					PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
+		} catch (TablenotAccessibleException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+					StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
+					description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (ValidationFailedException e) {
+			object.setInternalError(Boolean.FALSE);
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.VALIDATION_FAILED_EXCEPTION, RegistrationExceptionTypeCode.VALIDATION_FAILED_EXCEPTION,
+					description, PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
+		} catch (BaseUncheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
+					description, PlatformErrorMessages.INTRODUCER_BASE_UNCHECKED_EXCEPTION, e);
+		} catch (BaseCheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
+					description, PlatformErrorMessages.INTRODUCER_BASE_CHECKED_EXCEPTION, e);
+		} catch (Exception e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+					StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION, description,
+					PlatformErrorMessages.INTRODUCER_VALIDATION_FAILED, e);
+		} finally {
+			if (object.getInternalError()) {
+				int retryCount = registrationStatusDto.getRetryCount() != null
+						? registrationStatusDto.getRetryCount() + 1
+						: 1;
+				registrationStatusDto.setRetryCount(retryCount);
+				updateErrorFlags(registrationStatusDto, object);
 			}
+			registrationStatusDto.setUpdatedBy(USER);
+			/** Module-Id can be Both Success/Error code */
+			String moduleId = description.getCode();
+			String moduleName = ModuleName.INTRODUCER_VALIDATOR.toString();
+			registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+			updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+		}
 
 		return object;
 	}

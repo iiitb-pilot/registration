@@ -200,90 +200,90 @@ public class PacketClassificationProcessor {
 		registrationStatusDto.setRegistrationStageName(stageName);
 
 		try {
-		object.setMessageBusAddress(MessageBusAddress.PACKET_CLASSIFIER_BUS_IN);
-		object.setIsValid(Boolean.FALSE);
-		object.setInternalError(Boolean.TRUE);
+			object.setMessageBusAddress(MessageBusAddress.PACKET_CLASSIFIER_BUS_IN);
+			object.setIsValid(Boolean.FALSE);
+			object.setInternalError(Boolean.TRUE);
 
-		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
+			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(),
 				LoggerFileConstant.REGISTRATIONID.toString(), "",
 				"PacketClassificationProcessor::process()::entry");
-		registrationId = object.getRid();
+			registrationId = object.getRid();
 
 			registrationStatusDto = registrationStatusService.getRegistrationStatus(
 					registrationId, object.getReg_type(), object.getIteration(), object.getWorkflowInstanceId());
-				registrationStatusDto.setLatestTransactionTypeCode(
+			registrationStatusDto.setLatestTransactionTypeCode(
 						RegistrationTransactionTypeCode.PACKET_CLASSIFICATION.toString());
-				registrationStatusDto.setRegistrationStageName(stageName);
+			registrationStatusDto.setRegistrationStageName(stageName);
 
-				generateAndAddTags(registrationStatusDto.getWorkflowInstanceId(), registrationId,
-						registrationStatusDto.getRegistrationType(), object.getIteration());
-				object.setTags(null);
+			generateAndAddTags(registrationStatusDto.getWorkflowInstanceId(), registrationId,
+				registrationStatusDto.getRegistrationType(), object.getIteration());
+			object.setTags(null);
 
-				registrationStatusDto.setLatestTransactionStatusCode(
-						RegistrationTransactionStatusCode.SUCCESS.toString());
-				registrationStatusDto.setStatusComment(
-						StatusUtil.PACKET_CLASSIFICATION_SUCCESS.getMessage());
-				registrationStatusDto.setSubStatusCode(StatusUtil.PACKET_CLASSIFICATION_SUCCESS.getCode());
-				registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+			registrationStatusDto.setLatestTransactionStatusCode(
+				RegistrationTransactionStatusCode.SUCCESS.toString());
+			registrationStatusDto.setStatusComment(
+				StatusUtil.PACKET_CLASSIFICATION_SUCCESS.getMessage());
+			registrationStatusDto.setSubStatusCode(StatusUtil.PACKET_CLASSIFICATION_SUCCESS.getCode());
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
 
-				description.setMessage(
-						PlatformSuccessMessages.RPR_PKR_PACKET_CLASSIFIER.getMessage() + " -- " + registrationId);
-				description.setCode(PlatformSuccessMessages.RPR_PKR_PACKET_CLASSIFIER.getCode());
+			description.setMessage(
+				PlatformSuccessMessages.RPR_PKR_PACKET_CLASSIFIER.getMessage() + " -- " + registrationId);
+			description.setCode(PlatformSuccessMessages.RPR_PKR_PACKET_CLASSIFIER.getCode());
 
-				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-						LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
-						description.getCode() + description.getMessage());
+			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+				LoggerFileConstant.REGISTRATIONID.toString(), registrationId,
+				description.getCode() + description.getMessage());
 
-				object.setIsValid(Boolean.TRUE);
-				object.setInternalError(Boolean.FALSE);
-				isTransactionSuccessful = true;
-			} catch (PacketManagerException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
-						description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
-			} catch (DataAccessException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION,
-						description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (IOException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.IO_EXCEPTION, RegistrationExceptionTypeCode.IOEXCEPTION,
-						description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION, e);
-			} catch (ParsingException | JsonProcessingException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION,
-						description, PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
-			} catch (TablenotAccessibleException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
-						StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
-						description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
-			} catch (BaseUncheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
-						description, PlatformErrorMessages.RPR_PCM_BASE_UNCHECKED_EXCEPTION, e);
-			} catch (BaseCheckedException e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
-						description, PlatformErrorMessages.RPR_PCM_BASE_CHECKED_EXCEPTION, e);
-			} catch (Exception e) {
-				updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
-						StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION,
-						description, PlatformErrorMessages.PACKET_CLASSIFICATION_FAILED, e);
-			} finally {
-				if (object.getInternalError()) {
-					int retryCount = registrationStatusDto.getRetryCount() != null
-							? registrationStatusDto.getRetryCount() + 1
-							: 1;
-					registrationStatusDto.setRetryCount(retryCount);
-					updateErrorFlags(registrationStatusDto, object);
-				}
-				registrationStatusDto.setUpdatedBy(USER);
-				/** Module-Id can be Both Success/Error code */
-				String moduleId = description.getCode();
-				String moduleName = ModuleName.PACKET_CLASSIFIER.toString();
-				registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
-				updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+			object.setIsValid(Boolean.TRUE);
+			object.setInternalError(Boolean.FALSE);
+			isTransactionSuccessful = true;
+		} catch (PacketManagerException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+				StatusUtil.PACKET_MANAGER_EXCEPTION, RegistrationExceptionTypeCode.PACKET_MANAGER_EXCEPTION,
+				description, PlatformErrorMessages.PACKET_MANAGER_EXCEPTION, e);
+		} catch (DataAccessException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+				StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.DATA_ACCESS_EXCEPTION,
+				description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (IOException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+				StatusUtil.IO_EXCEPTION, RegistrationExceptionTypeCode.IOEXCEPTION,
+				description, PlatformErrorMessages.RPR_SYS_IO_EXCEPTION, e);
+		} catch (ParsingException | JsonProcessingException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+				StatusUtil.JSON_PARSING_EXCEPTION, RegistrationExceptionTypeCode.PARSE_EXCEPTION,
+				description, PlatformErrorMessages.RPR_SYS_JSON_PARSING_EXCEPTION, e);
+		} catch (TablenotAccessibleException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.PROCESSING,
+				StatusUtil.DB_NOT_ACCESSIBLE, RegistrationExceptionTypeCode.TABLE_NOT_ACCESSIBLE_EXCEPTION,
+				description, PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE, e);
+		} catch (BaseUncheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+				StatusUtil.BASE_UNCHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_UNCHECKED_EXCEPTION,
+				description, PlatformErrorMessages.RPR_PCM_BASE_UNCHECKED_EXCEPTION, e);
+		} catch (BaseCheckedException e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+				StatusUtil.BASE_CHECKED_EXCEPTION, RegistrationExceptionTypeCode.BASE_CHECKED_EXCEPTION,
+				description, PlatformErrorMessages.RPR_PCM_BASE_CHECKED_EXCEPTION, e);
+		} catch (Exception e) {
+			updateDTOsAndLogError(registrationStatusDto, RegistrationStatusCode.FAILED,
+				StatusUtil.UNKNOWN_EXCEPTION_OCCURED, RegistrationExceptionTypeCode.EXCEPTION,
+				description, PlatformErrorMessages.PACKET_CLASSIFICATION_FAILED, e);
+		} finally {
+			if (object.getInternalError()) {
+				int retryCount = registrationStatusDto.getRetryCount() != null
+						? registrationStatusDto.getRetryCount() + 1
+						: 1;
+				registrationStatusDto.setRetryCount(retryCount);
+				updateErrorFlags(registrationStatusDto, object);
 			}
+			registrationStatusDto.setUpdatedBy(USER);
+			/** Module-Id can be Both Success/Error code */
+			String moduleId = description.getCode();
+			String moduleName = ModuleName.PACKET_CLASSIFIER.toString();
+			registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+			updateAudit(description, isTransactionSuccessful, moduleId, moduleName, registrationId);
+		}
 
 		return object;
 	}

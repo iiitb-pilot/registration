@@ -42,9 +42,6 @@ public class MessageDTO implements Serializable {
 
 	private String workflowInstanceId;
 
-	private String transactionId;
-
-	private String transactionFlowId;
 	/**
 	 * Instantiates a new message DTO.
 	 */
@@ -52,13 +49,7 @@ public class MessageDTO implements Serializable {
 		super();
 	}
 
-	public String getTransactionFlowId() {
-		return transactionFlowId;
-	}
 
-	public void setTransactionFlowId(String transactionFlowId) {
-		this.transactionFlowId = transactionFlowId;
-	}
 
 	public String getReg_type() {
 		return reg_type;
@@ -222,14 +213,6 @@ public class MessageDTO implements Serializable {
 
 	public void setWorkflowInstanceId(String workflowInstanceId) {
 		this.workflowInstanceId = workflowInstanceId;
-	}
-
-	public String getTransactionId() {
-		return transactionId;
-	}
-
-	public void setTransactionId(String transactionId) {
-		this.transactionId = transactionId;
 	}
 
 	@Override
