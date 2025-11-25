@@ -246,21 +246,21 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 			if (!CollectionUtils.isEmpty(reprocessorDtoList)) {
 				List<Future> futures = new ArrayList<>();
 				AtomicInteger processedCount = new AtomicInteger(0);
-
+				AtomicInteger startCount = new AtomicInteger(0);
 				reprocessorDtoList.forEach(dto -> {
 					Promise<Void> promise = Promise.promise();
+					regProcLogger.info("Record started count :: {}", startCount.incrementAndGet());
 					vertx.executeBlocking(p -> {
 						processDTO(description, ridSb, reprocessRestartTriggerMap, dto);
 						p.complete();
 					}, false, res -> {
 						promise.complete();
-						int count = processedCount.incrementAndGet();
-						regProcLogger.info("Total records processed :: " + count);
+						regProcLogger.info("Record processed count :: {}", processedCount.incrementAndGet());
 					});
 					futures.add(promise.future());
 				});
 				CompositeFuture.all(futures).onComplete(ar -> {
-					regProcLogger.info("All DTOs processed");
+					regProcLogger.info("All DTOs processed, count - {}", futures.size());
 				});
 			}
 		} catch (TablenotAccessibleException e) {
