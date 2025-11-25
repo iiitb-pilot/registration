@@ -6,7 +6,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import io.vertx.core.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,8 +42,6 @@ import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
 import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
 import io.mosip.registration.processor.status.exception.TablenotAccessibleException;
 import io.mosip.registration.processor.status.service.RegistrationStatusService;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 
@@ -243,79 +243,25 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 						reprocessCount, statusList, reprocessExcludeStageNames);
 			}
 
-			
 			if (!CollectionUtils.isEmpty(reprocessorDtoList)) {
+				List<Future> futures = new ArrayList<>();
+				AtomicInteger processedCount = new AtomicInteger(0);
+
 				reprocessorDtoList.forEach(dto -> {
-					String registrationId = dto.getRegistrationId();
-					ridSb.append(registrationId);
-					ridSb.append(",");
-					MessageDTO messageDTO = new MessageDTO();
-					messageDTO.setRid(registrationId);
-					messageDTO.setReg_type(dto.getRegistrationType());
-					messageDTO.setSource(dto.getSource());
-					messageDTO.setIteration(dto.getIteration());
-					messageDTO.setWorkflowInstanceId(dto.getWorkflowInstanceId());
-					if (reprocessCount.equals(dto.getReProcessRetryCount())) {
-						dto.setLatestTransactionStatusCode(
-								RegistrationTransactionStatusCode.REPROCESS_FAILED.toString());
-						dto.setLatestTransactionTypeCode(
-								RegistrationTransactionTypeCode.PACKET_REPROCESS.toString());
-						dto.setStatusComment(StatusUtil.RE_PROCESS_FAILED.getMessage());
-						dto.setStatusCode(RegistrationStatusCode.REPROCESS_FAILED.toString());
-						dto.setSubStatusCode(StatusUtil.RE_PROCESS_FAILED.getCode());
-						messageDTO.setIsValid(false);
-						description.setMessage(PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getMessage());
-						description.setCode(PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getCode());
-
-					} else {
-						messageDTO.setIsValid(true);
-						isTransactionSuccessful = true;
-						String stageName;
-						if (isRestartFromStageRequired(dto, reprocessRestartTriggerMap)) {
-							stageName = MessageBusUtil.getMessageBusAdress(reprocessRestartFromStage);
-							stageName = stageName.concat(ReprocessorConstants.BUS_IN);
-								sendAndSetStatus(dto, messageDTO, stageName);
-								dto.setStatusComment(StatusUtil.RE_PROCESS_RESTART_FROM_STAGE.getMessage());
-								dto.setSubStatusCode(StatusUtil.RE_PROCESS_RESTART_FROM_STAGE.getCode());
-								description
-										.setMessage(
-												PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_RESTART_FROM_STAGE_SUCCESS
-														.getMessage());
-								description.setCode(
-										PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_RESTART_FROM_STAGE_SUCCESS
-												.getCode());
-
-						} else {
-							stageName = MessageBusUtil.getMessageBusAdress(dto.getRegistrationStageName());
-						if (RegistrationTransactionStatusCode.SUCCESS.name()
-								.equalsIgnoreCase(dto.getLatestTransactionStatusCode())) {
-							stageName = stageName.concat(ReprocessorConstants.BUS_OUT);
-						} else {
-							stageName = stageName.concat(ReprocessorConstants.BUS_IN);
-						}
-							sendAndSetStatus(dto, messageDTO, stageName);
-						dto.setStatusComment(StatusUtil.RE_PROCESS_COMPLETED.getMessage());
-						dto.setSubStatusCode(StatusUtil.RE_PROCESS_COMPLETED.getCode());
-						description.setMessage(PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getMessage());
-						description.setCode(PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getCode());
-						}
-					}
-					regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
-							LoggerFileConstant.REGISTRATIONID.toString(), registrationId, description.getMessage());
-
-					/** Module-Id can be Both Success/Error code */
-					String moduleId = PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getCode();
-					String moduleName = ModuleName.RE_PROCESSOR.toString();
-					registrationStatusService.updateRegistrationStatusForWorkflowEngine(dto, moduleId, moduleName);
-					String eventId = EventId.RPR_402.toString();
-					String eventName = EventName.UPDATE.toString();
-					String eventType = EventType.BUSINESS.toString();
-
-					if (!isTransactionSuccessful)
-						auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName,
-								eventType, moduleId, moduleName, registrationId);
+					Promise<Void> promise = Promise.promise();
+					vertx.executeBlocking(p -> {
+						processDTO(description, ridSb, reprocessRestartTriggerMap, dto);
+						p.complete();
+					}, false, res -> {
+						promise.complete();
+						int count = processedCount.incrementAndGet();
+						regProcLogger.info("Total records processed :: " + count);
+					});
+					futures.add(promise.future());
 				});
-			
+				CompositeFuture.all(futures).onComplete(ar -> {
+					regProcLogger.info("All DTOs processed");
+				});
 			}
 		} catch (TablenotAccessibleException e) {
 			isTransactionSuccessful = false;
@@ -355,6 +301,79 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 		}
 
 		return object;
+	}
+
+	private void processDTO(LogDescription description, StringBuffer ridSb, Map<String, Set<String>> reprocessRestartTriggerMap, InternalRegistrationStatusDto dto) {
+
+		String registrationId = dto.getRegistrationId();
+		ridSb.append(registrationId);
+		ridSb.append(",");
+		MessageDTO messageDTO = new MessageDTO();
+		messageDTO.setRid(registrationId);
+		messageDTO.setReg_type(dto.getRegistrationType());
+		messageDTO.setSource(dto.getSource());
+		messageDTO.setIteration(dto.getIteration());
+		messageDTO.setWorkflowInstanceId(dto.getWorkflowInstanceId());
+		if (reprocessCount.equals(dto.getReProcessRetryCount())) {
+			dto.setLatestTransactionStatusCode(
+					RegistrationTransactionStatusCode.REPROCESS_FAILED.toString());
+			dto.setLatestTransactionTypeCode(
+					RegistrationTransactionTypeCode.PACKET_REPROCESS.toString());
+			dto.setStatusComment(StatusUtil.RE_PROCESS_FAILED.getMessage());
+			dto.setStatusCode(RegistrationStatusCode.REPROCESS_FAILED.toString());
+			dto.setSubStatusCode(StatusUtil.RE_PROCESS_FAILED.getCode());
+			messageDTO.setIsValid(false);
+			description.setMessage(PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getMessage());
+			description.setCode(PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getCode());
+
+		} else {
+			messageDTO.setIsValid(true);
+			isTransactionSuccessful = true;
+			String stageName;
+			if (isRestartFromStageRequired(dto, reprocessRestartTriggerMap)) {
+				stageName = MessageBusUtil.getMessageBusAdress(reprocessRestartFromStage);
+				stageName = stageName.concat(ReprocessorConstants.BUS_IN);
+				sendAndSetStatus(dto, messageDTO, stageName);
+				dto.setStatusComment(StatusUtil.RE_PROCESS_RESTART_FROM_STAGE.getMessage());
+				dto.setSubStatusCode(StatusUtil.RE_PROCESS_RESTART_FROM_STAGE.getCode());
+				description
+						.setMessage(
+								PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_RESTART_FROM_STAGE_SUCCESS
+										.getMessage());
+				description.setCode(
+						PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_RESTART_FROM_STAGE_SUCCESS
+								.getCode());
+
+			} else {
+				stageName = MessageBusUtil.getMessageBusAdress(dto.getRegistrationStageName());
+				if (RegistrationTransactionStatusCode.SUCCESS.name()
+						.equalsIgnoreCase(dto.getLatestTransactionStatusCode())) {
+					stageName = stageName.concat(ReprocessorConstants.BUS_OUT);
+				} else {
+					stageName = stageName.concat(ReprocessorConstants.BUS_IN);
+				}
+				sendAndSetStatus(dto, messageDTO, stageName);
+				dto.setStatusComment(StatusUtil.RE_PROCESS_COMPLETED.getMessage());
+				dto.setSubStatusCode(StatusUtil.RE_PROCESS_COMPLETED.getCode());
+				description.setMessage(PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getMessage());
+				description.setCode(PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getCode());
+			}
+		}
+		regProcLogger.info(LoggerFileConstant.SESSIONID.toString(),
+				LoggerFileConstant.REGISTRATIONID.toString(), registrationId, description.getMessage());
+
+		/** Module-Id can be Both Success/Error code */
+		String moduleId = PlatformSuccessMessages.RPR_SENT_TO_REPROCESS_SUCCESS.getCode();
+		String moduleName = ModuleName.RE_PROCESSOR.toString();
+		registrationStatusService.updateRegistrationStatusForWorkflowEngine(dto, moduleId, moduleName);
+		String eventId = EventId.RPR_402.toString();
+		String eventName = EventName.UPDATE.toString();
+		String eventType = EventType.BUSINESS.toString();
+
+		if (!isTransactionSuccessful) {
+			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName,
+					eventType, moduleId, moduleName, registrationId);
+		}
 	}
 
 	private Map<String, Set<String>> intializeReprocessRestartTriggerMapping() {
