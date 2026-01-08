@@ -590,7 +590,7 @@ public class VerificationServiceImpl implements VerificationService {
 		if (StringUtils.isEmpty(url))
 			url = protocol + internalDomainName + env.getProperty(ApiName.DATASHARECREATEURL.name());
 		url = url.replaceAll("[\\[\\]]", "");
-		url=url.replace("http://datashare.datashare","https://api-internal.dst-dev.mosip.net");
+		//url=url.replace("http://datashare.datashare","https://api-internal.dst-dev.mosip.net");
 		LinkedHashMap response = (LinkedHashMap) registrationProcessorRestClientService.postApi(url,
 				MediaType.MULTIPART_FORM_DATA, pathSegments, null, null, map, LinkedHashMap.class);
 		if (response == null || (response.get(ERRORS) != null))
