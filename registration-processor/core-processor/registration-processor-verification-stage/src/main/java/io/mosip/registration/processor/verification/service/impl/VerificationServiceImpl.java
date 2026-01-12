@@ -12,7 +12,21 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static io.mosip.kernel.biometrics.commons.CbeffValidator.validateXML;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import io.mosip.kernel.biometrics.entities.BIR;
+import io.mosip.kernel.cbeffutil.container.impl.CbeffContainerImpl;
+import org.apache.commons.io.IOUtils;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+
+import io.mosip.kernel.biometrics.entities.BIR;
+import io.mosip.kernel.cbeffutil.container.impl.CbeffContainerImpl;
 import io.mosip.registration.processor.core.exception.PacketManagerNonRecoverableException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.JSONObject;
@@ -145,6 +159,12 @@ public class VerificationServiceImpl implements VerificationService {
 
 	@Value("${mosip.regproc.data.share.internal.domain.name}")
 	private String internalDomainName;
+
+	@Value("${mosip.kernel.xsdstorage-uri}")
+	private String configServerFileStorageURL;
+
+	@Value("${mosip.kernel.xsdfile}")
+	private String schemaFileName;
 
 	@Autowired
 	private RegistrationProcessorRestClientService registrationProcessorRestClientService;
@@ -528,7 +548,12 @@ public class VerificationServiceImpl implements VerificationService {
 			List<String> modalities = getModalities(policy);
 			BiometricRecord biometricRecord = packetManagerService.getBiometrics(id, individualBiometricsLabel,
 					modalities, process, ProviderStageName.VERIFICATION);
-			byte[] content = cbeffutil.createXML(biometricRecord.getSegments());
+		//	byte[] content = cbeffutil.createXML(biometricRecord.getSegments());
+			CbeffContainerImpl cbeffContainer = new CbeffContainerImpl();
+			//BIR bir = cbeffContainer.createBIRType(birList);
+			BIR bir = cbeffContainer.createBIRType(biometricRecord.getSegments());
+			InputStream xsd = new URL(configServerFileStorageURL + schemaFileName).openStream();
+			byte[] content =createXMLBytes(bir, IOUtils.toByteArray(xsd));
 			requestDto.setBiometrics(content != null ? CryptoUtil.encodeToURLSafeBase64(content) : null);
 		}
 
@@ -573,6 +598,18 @@ public class VerificationServiceImpl implements VerificationService {
 
 		LinkedHashMap datashare = (LinkedHashMap) response.get(DATASHARE);
 		return datashare.get(URL) != null ? datashare.get(URL).toString() : null;
+		}
+	public byte[] createXMLBytes(BIR bir, byte[] xsd) throws Exception {
+		validateXML(bir);
+		JAXBContext jaxbContext = JAXBContext.newInstance(new Class[]{BIR.class});
+		Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+		jaxbMarshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		OutputStreamWriter writer = new OutputStreamWriter(baos);
+		jaxbMarshaller.marshal(bir, writer);
+		byte[] savedData = baos.toByteArray();
+		writer.close();
+		return savedData;
 	}
 
 	private Map<String, String> getPolicyMap(LinkedHashMap<String, Object> policies) throws IOException {
