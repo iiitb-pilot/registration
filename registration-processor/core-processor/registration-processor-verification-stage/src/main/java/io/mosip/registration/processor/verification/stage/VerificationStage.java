@@ -180,7 +180,7 @@ public class VerificationStage extends MosipVerticleAPIManager {
 
 	@Override
 	public void start() {
-		router.setRoute(this.postUrl(getVertx(), MessageBusAddress.MANUAL_ADJUDICATION_BUS_IN, MessageBusAddress.MANUAL_ADJUDICATION_BUS_OUT));
+		router.setRoute(this.postUrl(getVertx(), MessageBusAddress.VERIFICATION_BUS_IN, MessageBusAddress.VERIFICATION_BUS_OUT));
 		this.createServer(router.getRouter(), getPort());
 	}
 
