@@ -288,7 +288,7 @@ public class VerificationServiceImpl implements VerificationService {
 					e.getMessage(), e.getMessage());
 		} finally {
 			if (isTransactionSuccessful) {
-				messageDTO.setIsValid(true);
+				messageDTO.setIsValid(false);
 				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
 				description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
 			} else
