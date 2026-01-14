@@ -288,7 +288,7 @@ public class VerificationServiceImpl implements VerificationService {
 					e.getMessage(), e.getMessage());
 		} finally {
 			if (isTransactionSuccessful) {
-				messageDTO.setIsValid(true);
+				messageDTO.setIsValid(false);
 				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
 				description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
 			} else
@@ -586,6 +586,7 @@ public class VerificationServiceImpl implements VerificationService {
 		if (StringUtils.isEmpty(url))
 			url = protocol + internalDomainName + env.getProperty(ApiName.DATASHARECREATEURL.name());
 		url = url.replaceAll("[\\[\\]]", "");
+		url=url.replace("http://datashare.datashare","https://api-internal.dst-dev.mosip.net");
 
 		LinkedHashMap response = (LinkedHashMap) registrationProcessorRestClientService.postApi(url,
 				MediaType.MULTIPART_FORM_DATA, pathSegments, null, null, map, LinkedHashMap.class);
@@ -815,6 +816,4 @@ public class VerificationServiceImpl implements VerificationService {
 		}
 		return isResendFlow;
 	}
-
-
 }
