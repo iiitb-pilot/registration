@@ -286,7 +286,7 @@ public class VerificationServiceImpl implements VerificationService {
 			regProcLogger.error(ExceptionUtils.getStackTrace(e));
 			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 					e.getMessage(), e.getMessage());
-		} finally {
+		} /*finally {
 			if (isTransactionSuccessful) {
 				messageDTO.setIsValid(true);
 				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
@@ -295,7 +295,7 @@ public class VerificationServiceImpl implements VerificationService {
 				registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
 			updateStatus(messageDTO, registrationStatusDto, isTransactionSuccessful, description,
 					PlatformSuccessMessages.RPR_VERIFICATION_SENT);
-		}
+		}*/
 
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 				messageDTO.getRid(), "VerificationServiceImpl::process()::entry");
