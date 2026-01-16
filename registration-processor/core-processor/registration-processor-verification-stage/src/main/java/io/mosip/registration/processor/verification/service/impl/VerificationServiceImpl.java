@@ -287,11 +287,6 @@ public class VerificationServiceImpl implements VerificationService {
 			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 					e.getMessage(), e.getMessage());
 		} finally {
-			if (isTransactionSuccessful) {
-				messageDTO.setIsValid(false);
-				description.setCode(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getCode());
-				description.setMessage(PlatformSuccessMessages.RPR_VERIFICATION_SUCCESS.getMessage());
-			} else
 				registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
 			updateStatus(messageDTO, registrationStatusDto, isTransactionSuccessful, description,
 					PlatformSuccessMessages.RPR_VERIFICATION_SENT);
@@ -302,7 +297,6 @@ public class VerificationServiceImpl implements VerificationService {
 
 		return messageDTO;
 	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -310,6 +304,101 @@ public class VerificationServiceImpl implements VerificationService {
 	 * ManualAdjudicationService#updatePacketStatus(io.mosip.registration.processor.
 	 * verification.dto.ManualVerificationDTO)
 	 */
+	/*@Override
+	public MessageDTO process(MessageDTO messageDTO, MosipQueue queue, String stageName) {
+
+		InternalRegistrationStatusDto registrationStatusDto = new InternalRegistrationStatusDto();
+		LogDescription description = new LogDescription();
+		String moduleName = ModuleName.VERIFICATION.toString();
+		String moduleId = PlatformSuccessMessages.RPR_VERIFICATION_SENT.getCode();
+		String registrationId = messageDTO.getRid();
+
+		boolean isTransactionSuccessful = false;
+
+		try {
+			messageDTO.setInternalError(false);
+			messageDTO.setIsValid(false);
+			messageDTO.setMessageBusAddress(MessageBusAddress.VERIFICATION_BUS_IN);
+
+			if (messageDTO.getRid() == null || messageDTO.getRid().isEmpty()) {
+				throw new InvalidRidException(
+						PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getCode(),
+						PlatformErrorMessages.RPR_MVS_NO_RID_SHOULD_NOT_EMPTY_OR_NULL.getMessage()
+				);
+			}
+			regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), messageDTO.getRid(),
+					"VerificationServiceImpl::process()::entry"
+			);
+
+			registrationStatusDto = registrationStatusService.getRegistrationStatus(messageDTO.getRid(), messageDTO.getReg_type(), messageDTO.getIteration(), messageDTO.getWorkflowInstanceId());
+			VerificationRequestDTO request = prepareVerificationRequest(messageDTO, registrationStatusDto);
+			saveVerificationRecordUtility.saveVerificationRecord(messageDTO, request.getRequestId(), description);
+
+			if (TEXT_MESSAGE.equalsIgnoreCase(messageFormat)) {
+				mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(request), mvRequestAddress, mvRequestMessageTTL);
+			} else {
+				mosipQueueManager.send(queue, JsonUtils.javaObjectToJsonString(request).getBytes(), mvRequestAddress, mvRequestMessageTTL);
+			}
+
+			regProcLogger.info("RID : " + messageDTO.getRid() + " successfully sent for verification.");
+
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.PROCESSING.toString());
+			registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_SENT.getCode());
+			registrationStatusDto.setStatusComment(StatusUtil.VERIFICATION_SENT.getMessage());
+			registrationStatusDto
+					.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.IN_PROGRESS.toString());
+			registrationStatusDto.setRegistrationStageName(stageName);
+
+			isTransactionSuccessful = true;
+
+		} catch (DataShareException de) {
+
+			isTransactionSuccessful = false;
+			messageDTO.setInternalError(true);
+
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+			registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
+			registrationStatusDto.setStatusComment(de.getMessage());
+			registrationStatusDto
+					.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.ERROR.toString());
+
+			description.setCode(de.getErrorCode());
+			description.setMessage(de.getMessage());
+
+			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), de.getErrorCode(), de.getErrorText());
+		} catch (Exception e) {
+
+			isTransactionSuccessful = false;
+			messageDTO.setInternalError(true);
+
+			registrationStatusDto.setStatusCode(RegistrationStatusCode.FAILED.toString());
+			registrationStatusDto.setSubStatusCode(StatusUtil.VERIFICATION_FAILED.getCode());
+			registrationStatusDto
+					.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.ERROR.toString());
+
+			description.setMessage(e.getMessage());
+
+			regProcLogger.error(ExceptionUtils.getStackTrace(e));
+
+		} finally {
+			registrationStatusDto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.VERIFICATION.toString());
+			registrationStatusService.updateRegistrationStatus(registrationStatusDto, moduleId, moduleName);
+
+			String eventId = isTransactionSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
+
+			String eventName = isTransactionSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
+
+			String eventType = isTransactionSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
+
+			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType, moduleId, moduleName, registrationId);
+		}
+		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), messageDTO.getRid(),
+				"VerificationServiceImpl::process()::exit"
+		);
+
+		return messageDTO;
+	}
+*/
 	@Override
 	public boolean updatePacketStatus(VerificationResponseDTO manualVerificationDTO, String stageName,
 			MosipQueue queue) {
