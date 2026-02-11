@@ -12,6 +12,15 @@ public class RegistrationAdditionalInfoDTO implements Serializable {
 	private String name;
 	private String phone;
 	private String email;
+
+	private String whatsappNumber;
+
+	public String getWhatsappNumber() {
+		return whatsappNumber;
+	}
+	public void setWhatsappNumber(String whatsappNumber) {
+		this.whatsappNumber = whatsappNumber;
+	}
 	
 	public String getName() {
 		return name;
@@ -32,4 +41,5 @@ public class RegistrationAdditionalInfoDTO implements Serializable {
 		this.email = email;
 	}
 	
+
 }
