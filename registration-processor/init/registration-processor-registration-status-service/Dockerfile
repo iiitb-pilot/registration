@@ -1,4 +1,4 @@
-FROM openjdk:11
+FROM eclipse-temurin:11-jre
 
 #Uncomment below and Comment above line(i.e. FROM openjdk:8) for OS specific (e.g. Alpine OS ) docker base image
 #FROM openjdk:8-jdk-alpine
@@ -86,3 +86,4 @@ CMD if [ "$active_profile_env" = "preprod" ]; then \
    fi
 
 #CMD ["java","-Dspring.cloud.config.label=${spring_config_label_env}","-Dspring.profiles.active=${active_profile_env}","-Dspring.cloud.config.uri=${spring_config_url_env}","-jar","-javaagent:/home/Glowroot/glowroot.jar","registration-processor-registration-status-service.jar"]
+
