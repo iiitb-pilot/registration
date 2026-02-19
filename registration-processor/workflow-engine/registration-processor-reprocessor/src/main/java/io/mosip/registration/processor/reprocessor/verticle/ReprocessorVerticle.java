@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.mosip.registration.processor.core.constant.AuditLogConstant;
+
 import io.vertx.core.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +28,7 @@ import io.mosip.registration.processor.core.code.EventType;
 import io.mosip.registration.processor.core.code.ModuleName;
 import io.mosip.registration.processor.core.code.RegistrationTransactionStatusCode;
 import io.mosip.registration.processor.core.code.RegistrationTransactionTypeCode;
+import io.mosip.registration.processor.core.constant.AuditLogConstant;
 import io.mosip.registration.processor.core.constant.LoggerFileConstant;
 import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
 import io.mosip.registration.processor.core.exception.util.PlatformSuccessMessages;
@@ -48,11 +49,11 @@ import io.vertx.core.json.JsonObject;
 /**
  * The Reprocessor Verticle to deploy the scheduler and implement re-processing
  * logic
- * 
+ *
  * @author Alok Ranjan
  * @author Sowmya
  * @author Pranav Kumar
- * 
+ *
  * @since 0.10.0
  *
  */
@@ -73,7 +74,7 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 
 	/** The mosip event bus. */
 	MosipEventBus mosipEventBus = null;
-	
+
 	/** The fetch size. */
 	@Value("${registration.processor.reprocess.fetchsize}")
 	private Integer fetchSize;
@@ -95,9 +96,6 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 
 	@Value("#{'${registration.processor.reprocess.restart-trigger-filter}'.split(',')}")
 	private List<String> reprocessRestartTriggerFilter;
-
-	/** The is Batch successful. */
-	boolean isBatchSuccessful;
 
 	/** The registration status service. */
 	@Autowired
@@ -211,13 +209,16 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * io.mosip.registration.processor.core.spi.eventbus.EventBusManager#process(
 	 * java.lang.Object)
 	 */
 	@Override
 	public MessageDTO process(MessageDTO object) {
+
+		boolean isReprocessorSuccessful = false;
+		StringBuffer ridSb=new StringBuffer();
 		List<InternalRegistrationStatusDto> reprocessorDtoList = null;
 		LogDescription description = new LogDescription();
 		List<String> statusList = new ArrayList<>();
@@ -243,10 +244,11 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 			}
 
 			if (!CollectionUtils.isEmpty(reprocessorDtoList)) {
-				isBatchSuccessful = true;
-				regProcLogger.info("Reprocess count - {}", reprocessorDtoList.size());
+				regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+						null, "Reprocess count - {}", reprocessorDtoList.size());
 				List<Future> futures = new ArrayList<>();
 				reprocessorDtoList.forEach(dto -> {
+					ridSb.append(dto.getRegistrationId()).append(",");
 					Promise<Void> promise = Promise.promise();
 					vertx.executeBlocking(p -> {
 						processDTO(reprocessRestartTriggerMap, dto);
@@ -261,15 +263,33 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 					futures.add(promise.future());
 				});
 				CompositeFuture.all(futures).onComplete(ar -> {
-					if (ar.succeeded()) {
-						regProcLogger.info("Successfully processed count - {}", futures.size());
-					} else {
-						regProcLogger.error("Failed to process some DTOs", ar.cause());
+					boolean isBatchSuccessful = ar.succeeded();
+					try {
+						if (!isBatchSuccessful) {
+							regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+									null, PlatformErrorMessages.REPROCESSOR_VERTICLE_FAILED.getMessage()
+											+ ExceptionUtils.getStackTrace(ar.cause()));
+						}
+					} finally {
+						String message = isBatchSuccessful ? PlatformSuccessMessages.RPR_RE_PROCESS_SUCCESS.getMessage() :
+								PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getMessage();
+						regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+								null, message);
+						String eventId = isBatchSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
+						String eventName = isBatchSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
+						String eventType = isBatchSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
+						/** Module-Id can be Both Success/Error code */
+						String moduleId = isBatchSuccessful ? PlatformSuccessMessages.RPR_RE_PROCESS_SUCCESS.getCode() :
+								PlatformSuccessMessages.RPR_RE_PROCESS_FAILED.getCode();;
+						String moduleName = ModuleName.RE_PROCESSOR.toString();
+						auditLogRequestBuilder.createAuditRequestBuilder(message, eventId, eventName, eventType,
+								moduleId, moduleName, (ridSb.toString().length()>1?ridSb.substring(0,ridSb.length()-1):""));
 					}
 				});
 			}
+			isReprocessorSuccessful = true;
 		} catch (TablenotAccessibleException e) {
-			isBatchSuccessful = false;
+			isReprocessorSuccessful = false;
 			object.setInternalError(Boolean.TRUE);
 			description.setMessage(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getMessage());
 			description.setCode(PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getCode());
@@ -278,7 +298,7 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 					PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getMessage(), e.toString());
 
 		} catch (Exception ex) {
-			isBatchSuccessful = false;
+			isReprocessorSuccessful = false;
 			description.setMessage(PlatformErrorMessages.REPROCESSOR_VERTICLE_FAILED.getMessage());
 			description.setCode(PlatformErrorMessages.REPROCESSOR_VERTICLE_FAILED.getCode());
 			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
@@ -290,15 +310,15 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 		} finally {
 			regProcLogger.info(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 					null, description.getMessage());
-			if (isBatchSuccessful)
+			if (isReprocessorSuccessful)
 				description.setMessage(PlatformSuccessMessages.RPR_RE_PROCESS_SUCCESS.getMessage());
 
-			String eventId = isBatchSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
-			String eventName = isBatchSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
-			String eventType = isBatchSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
+			String eventId = isReprocessorSuccessful ? EventId.RPR_402.toString() : EventId.RPR_405.toString();
+			String eventName = isReprocessorSuccessful ? EventName.UPDATE.toString() : EventName.EXCEPTION.toString();
+			String eventType = isReprocessorSuccessful ? EventType.BUSINESS.toString() : EventType.SYSTEM.toString();
 
 			/** Module-Id can be Both Success/Error code */
-			String moduleId = isBatchSuccessful ? PlatformSuccessMessages.RPR_RE_PROCESS_SUCCESS.getCode()
+			String moduleId = isReprocessorSuccessful ? PlatformSuccessMessages.RPR_RE_PROCESS_SUCCESS.getCode()
 					: description.getCode();
 			String moduleName = ModuleName.RE_PROCESSOR.toString();
 			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
@@ -397,16 +417,16 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 			} else {
 				latestTransactionStatusCodeSet = new HashSet<String>();
 				setReprocessRestartTriggerMap(reprocessRestartTriggerMap, stageName, latestTransactionStatusCode,
-					latestTransactionStatusCodeSet);
+						latestTransactionStatusCodeSet);
+			}
 		}
-	}
-	return reprocessRestartTriggerMap;
+		return reprocessRestartTriggerMap;
 
 
 	}
 
 	private void setReprocessRestartTriggerMap(Map<String, Set<String>> reprocessRestartTriggerMap, String stageName,
-			String latestTransactionStatusCode, Set<String> latestTransactionStatusCodeSet) {
+				   	String latestTransactionStatusCode, Set<String> latestTransactionStatusCodeSet) {
 		if (latestTransactionStatusCode.equalsIgnoreCase("*")) {
 			latestTransactionStatusCodeSet.add(RegistrationTransactionStatusCode.SUCCESS.toString());
 			latestTransactionStatusCodeSet.add(RegistrationTransactionStatusCode.IN_PROGRESS.toString());
@@ -418,7 +438,7 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 	}
 
 	private boolean isRestartFromStageRequired(InternalRegistrationStatusDto dto,
-			Map<String, Set<String>> reprocessRestartTriggerMap) {
+					Map<String, Set<String>> reprocessRestartTriggerMap) {
 		boolean isRestartFromStageRequired = false;
 		String stageName = dto.getRegistrationStageName();
 		if (reprocessRestartTriggerMap.containsKey(stageName)) {
@@ -439,9 +459,9 @@ public class ReprocessorVerticle extends MosipVerticleAPIManager {
 		dto.setLatestTransactionStatusCode(RegistrationTransactionStatusCode.REPROCESS.toString());
 		dto.setLatestTransactionTypeCode(RegistrationTransactionTypeCode.PACKET_REPROCESS.toString());
 	}
-	
-	
-	
+
+
+
 	@Override
 	protected String getPropertyPrefix() {
 		return VERTICLE_PROPERTY_PREFIX;
