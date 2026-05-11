@@ -66,6 +66,7 @@ public class SyncRegistrationDao {
 	/** The Constant ISDELETED_COLON. */
 	public static final String ISDELETED_COLON = ".isDeleted=:";
 
+    public static final String REGISTRATION_DATE = "registrationDate";
 
 	/**
 	 * Save.
@@ -196,8 +197,16 @@ public class SyncRegistrationDao {
 					sb.append(EMPTY_STRING + AND + EMPTY_STRING + alias + "." + filterInfo.getColumnName()
 							+ " BETWEEN :" + fromParam + " AND :" + toParam);
 
-					params.put(fromParam, LocalDate.parse(filterInfo.getFromValue()));
-					params.put(toParam, LocalDate.parse(filterInfo.getToValue()));
+					if (REGISTRATION_DATE.equals(filterInfo.getColumnName())) {
+						params.put(fromParam,
+								LocalDate.parse(filterInfo.getFromValue()));
+
+						params.put(toParam,
+								LocalDate.parse(filterInfo.getToValue()));
+					} else {
+						params.put(fromParam, filterInfo.getFromValue());
+						params.put(toParam, filterInfo.getToValue());
+					}
 				} else {
 					sb.append(EMPTY_STRING + AND + EMPTY_STRING + alias + "." + filterInfo.getColumnName() + "=:"
 							+ filterInfo.getColumnName());
