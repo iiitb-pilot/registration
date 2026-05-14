@@ -1,4 +1,4 @@
-name: Maven Package upon a push
+name: Status-Service Manual Trigger Build
 
 on:
   release:
