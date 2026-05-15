@@ -1,4 +1,4 @@
-name: Maven Package upon a push
+name: Group-1 Manual Trigger Build
 
 on:
   release:
