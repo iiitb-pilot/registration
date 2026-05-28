@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import io.mosip.kernel.core.util.DateUtils2;
+import io.mosip.registration.processor.status.dto.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,17 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mosip.registration.processor.core.exception.util.PlatformErrorMessages;
 import io.mosip.registration.processor.core.util.DigitalSignatureUtility;
 import io.mosip.registration.processor.status.code.RegistrationExternalStatusCode;
-import io.mosip.registration.processor.status.dto.ErrorDTO;
-import io.mosip.registration.processor.status.dto.InternalRegistrationStatusDto;
-import io.mosip.registration.processor.status.dto.LostRidDto;
-import io.mosip.registration.processor.status.dto.LostRidRequestDto;
-import io.mosip.registration.processor.status.dto.LostRidResponseDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusErrorDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusRequestDTO;
-import io.mosip.registration.processor.status.dto.RegistrationStatusSubRequestDto;
-import io.mosip.registration.processor.status.dto.SyncRegistrationDto;
-import io.mosip.registration.processor.status.dto.SyncResponseDto;
 import io.mosip.registration.processor.status.exception.RegStatusAppException;
 import io.mosip.registration.processor.status.service.RegistrationStatusService;
 import io.mosip.registration.processor.status.service.SyncRegistrationService;
@@ -189,9 +179,9 @@ public class RegistrationStatusController {
 
 		try {
 			lostRidRequestValidator.validate(lostRidRequestDto);
-			List<LostRidDto> lostRidDtos = syncRegistrationService.searchLostRid(lostRidRequestDto.getRequest());
+			PageResponseDto<LostRidDto> pageResponseDto = syncRegistrationService.searchLostRid(lostRidRequestDto.getRequest());
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(buildLostRidResponse(lostRidDtos));
+					.body(buildLostRidResponse(pageResponseDto));
 		} catch (RegStatusAppException e) {
 			throw new RegStatusAppException(PlatformErrorMessages.RPR_RGS_DATA_VALIDATION_FAILED, e);
 		} catch (Exception e) {
@@ -236,7 +226,7 @@ public class RegistrationStatusController {
 		}
 	}
 
-	public LostRidResponseDto buildLostRidResponse(List<LostRidDto> lostRidDtos) {
+	public LostRidResponseDto buildLostRidResponse(PageResponseDto<LostRidDto> pageResponseDto) {
 
 		LostRidResponseDto response = new LostRidResponseDto();
 		if (Objects.isNull(response.getId())) {
@@ -244,9 +234,12 @@ public class RegistrationStatusController {
 		}
 		response.setResponsetime(DateUtils2.getUTCCurrentDateTimeString(env.getProperty(DATETIME_PATTERN)));
 		response.setVersion(env.getProperty(REG_LOSTRID_APPLICATION_VERSION));
-		response.setResponse(lostRidDtos);
+		response.setResponse(pageResponseDto);
+
+		List<LostRidDto> lostRidDtos = pageResponseDto.getData();
 		List<ErrorDTO> errors = new ArrayList<ErrorDTO>();
-		if (lostRidDtos.isEmpty()) {
+
+		if (lostRidDtos == null || lostRidDtos.isEmpty()) {
 			RegistrationStatusErrorDto errorDto = new RegistrationStatusErrorDto(
 					PlatformErrorMessages.RPR_RGS_RID_NOT_FOUND.getCode(),
 					PlatformErrorMessages.RPR_RGS_RID_NOT_FOUND.getMessage());
