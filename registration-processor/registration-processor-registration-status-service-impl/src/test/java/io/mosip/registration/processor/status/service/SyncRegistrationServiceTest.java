@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import io.mosip.kernel.core.util.CryptoUtil;
-import io.mosip.registration.processor.status.dto.*;
 import org.json.simple.JSONObject;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -51,6 +50,18 @@ import io.mosip.registration.processor.rest.client.audit.builder.AuditLogRequest
 import io.mosip.registration.processor.rest.client.utils.RestApiClient;
 import io.mosip.registration.processor.status.dao.SyncRegistrationDao;
 import io.mosip.registration.processor.status.decryptor.Decryptor;
+import io.mosip.registration.processor.status.dto.FilterInfo;
+import io.mosip.registration.processor.status.dto.LostRidDto;
+import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
+import io.mosip.registration.processor.status.dto.RegistrationStatusSubRequestDto;
+import io.mosip.registration.processor.status.dto.RegistrationSyncRequestDTO;
+import io.mosip.registration.processor.status.dto.SearchInfo;
+import io.mosip.registration.processor.status.dto.SyncRegistrationDto;
+import io.mosip.registration.processor.status.dto.SyncResponseDto;
+import io.mosip.registration.processor.status.dto.SyncResponseFailDto;
+import io.mosip.registration.processor.status.dto.SyncResponseFailureV2Dto;
+import io.mosip.registration.processor.status.dto.SyncResponseSuccessDto;
+import io.mosip.registration.processor.status.dto.SyncTypeDto;
 import io.mosip.registration.processor.status.encryptor.Encryptor;
 import io.mosip.registration.processor.status.entity.SyncRegistrationEntity;
 import io.mosip.registration.processor.status.exception.EncryptionFailureException;
@@ -362,9 +373,6 @@ public class SyncRegistrationServiceTest {
 		syncRegistrationEntity.setCreatedBy("MOSIP");
 		syncRegistrationEntity.setUpdatedBy("MOSIP");
 		syncRegistrationEntity.setPacketId("test1");
-		syncRegistrationEntity.setEmail("mosip1@gmail.com");
-		syncRegistrationEntity.setAdditionalInfoReqId("mosip");
-		syncRegistrationEntity.setName("mosip");
 		syncRegistrationEntities.add(syncRegistrationEntity);
 		Mockito.when(ridValidator.validateId(any())).thenReturn(true);
 		Mockito.when(syncRegistrationDao.getSaltValue(any())).thenReturn("abc12");
@@ -844,10 +852,8 @@ public class SyncRegistrationServiceTest {
 		testIdList.add("1001");
 		searchInfo.setFilters(filterInfos);
 		searchInfo.setSort(sortInfos);
-		PageResponseDto<LostRidDto> response = syncRegistrationService.searchLostRid(searchInfo);
-		List<LostRidDto> lostRidDtos = response.getData();
-		assertEquals(testIdList.get(0),
-				lostRidDtos.get(0).getRegistrationId());
+		List<LostRidDto> lostRidDtos = syncRegistrationService.searchLostRid(searchInfo);
+		assertEquals(lostRidDtos.get(0).getRegistrationId(), testIdList.get(0));
 	}
 
 	@Test
@@ -874,15 +880,10 @@ public class SyncRegistrationServiceTest {
 		filterInfos.add(filterInfo);
 		filterInfos.add(filterInfo1);
 		sortInfos.add(sortInfo);
-		Pagination pagination = new Pagination();
-		pagination.setPageStart(0);
-		pagination.setPageFetch(10);
 		testIdList.add("27847657360002520181208183052");
 		searchInfo.setFilters(filterInfos);
 		searchInfo.setSort(sortInfos);
-		searchInfo.setPagination(pagination);
-		PageResponseDto<LostRidDto> response = syncRegistrationService.searchLostRid(searchInfo);
-		List<LostRidDto> lostRidDtos = response.getData();
+		List<LostRidDto> lostRidDtos = syncRegistrationService.searchLostRid(searchInfo);
 		assertEquals(lostRidDtos.get(0).getRegistrationId(), testIdList.get(0));
 	}
 	
