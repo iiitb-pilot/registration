@@ -444,9 +444,9 @@
 					<configuration>
 						<source>${maven.compiler.source}</source>
 						<target>${maven.compiler.target}</target>
-						<compilerArgs>
-                        <arg>--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
-        </compilerArgs>
+						<!--<compilerArgs>
+                        <arg>&#45;&#45;add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+        </compilerArgs>-->
 					</configuration>
 				</plugin>
 				<plugin>
