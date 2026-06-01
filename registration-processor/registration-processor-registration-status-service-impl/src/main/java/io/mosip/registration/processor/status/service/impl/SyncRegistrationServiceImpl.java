@@ -774,7 +774,7 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 			List<SyncRegistrationEntity> syncRegistrationEntities = syncRegistrationDao.getSearchResults(
 					searchInfo.getFilters(),
 					Collections.emptyList());
-			List<LostRidDto> lostRidDtos = entityToDtoMapper(syncRegistrationEntities);
+			List<LostRidDto> lostRidDtos = new ArrayList<>(entityToDtoMapper(syncRegistrationEntities));
 			validateRegistrationIds(lostRidDtos);
 			return applyPagination(lostRidDtos, sort, pagination);
 		} catch (DataAccessLayerException | NoSuchAlgorithmException | RegStatusAppException e) {
