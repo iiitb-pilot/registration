@@ -3,25 +3,23 @@
  */
 package io.mosip.registration.processor.status.service.impl;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Timestamp;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import io.mosip.kernel.core.util.*;
+import io.mosip.registration.processor.core.workflow.dto.SortInfo;
+import io.mosip.registration.processor.status.dto.*;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,20 +55,6 @@ import io.mosip.registration.processor.status.code.RegistrationExternalStatusCod
 import io.mosip.registration.processor.status.code.SupervisorStatus;
 import io.mosip.registration.processor.status.dao.SyncRegistrationDao;
 import io.mosip.registration.processor.status.decryptor.Decryptor;
-import io.mosip.registration.processor.status.dto.FilterInfo;
-import io.mosip.registration.processor.status.dto.LostRidDto;
-import io.mosip.registration.processor.status.dto.RegistrationAdditionalInfoDTO;
-import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusSubRequestDto;
-import io.mosip.registration.processor.status.dto.RegistrationSyncRequestDTO;
-import io.mosip.registration.processor.status.dto.SearchInfo;
-import io.mosip.registration.processor.status.dto.SyncRegistrationDto;
-import io.mosip.registration.processor.status.dto.SyncResponseDto;
-import io.mosip.registration.processor.status.dto.SyncResponseFailDto;
-import io.mosip.registration.processor.status.dto.SyncResponseFailureDto;
-import io.mosip.registration.processor.status.dto.SyncResponseFailureV2Dto;
-import io.mosip.registration.processor.status.dto.SyncResponseSuccessDto;
-import io.mosip.registration.processor.status.dto.SyncResponseSuccessV2Dto;
 import io.mosip.registration.processor.status.encryptor.Encryptor;
 import io.mosip.registration.processor.status.entity.SyncRegistrationEntity;
 import io.mosip.registration.processor.status.exception.EncryptionFailureException;
@@ -107,7 +91,7 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 	@Value("${mosip.registration.processor.lostrid.iteration.max.count:10000}")
 	private int iteration;
 
-	@Value("${registration.processor.lostrid.max.registrationid:5}")
+	@Value("${registration.processor.lostrid.max.registrationid:50}")
 	private int maxSearchResult;
 
 	/** The event type. */
@@ -779,23 +763,67 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 	}
 
 	@Override
-	public List<LostRidDto> searchLostRid(SearchInfo searchInfo) {
+	public PageResponseDto<LostRidDto> searchLostRid(SearchInfo searchInfo) {
 		regProcLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), "",
 				"SyncRegistrationServiceImpl::getByIds()::entry");
 		try {
 			updateFiltersWithHashedValues(searchInfo);
+			Pagination pagination = searchInfo.getPagination();
+			List<SortInfo> sort = searchInfo.getSort();
+
 			List<SyncRegistrationEntity> syncRegistrationEntities = syncRegistrationDao.getSearchResults(
 					searchInfo.getFilters(),
-					searchInfo.getSort());
-			List<LostRidDto> lostRidDtos = entityToDtoMapper(syncRegistrationEntities);
+					Collections.emptyList());
+			List<LostRidDto> lostRidDtos = new ArrayList<>(entityToDtoMapper(syncRegistrationEntities));
 			validateRegistrationIds(lostRidDtos);
-			return lostRidDtos;
+			return applyPagination(lostRidDtos, sort, pagination);
 		} catch (DataAccessLayerException | NoSuchAlgorithmException | RegStatusAppException e) {
-
 			regProcLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
 					"", e.getMessage() + ExceptionUtils.getStackTrace(e));
 			throw new TablenotAccessibleException(
 					PlatformErrorMessages.RPR_RGS_REGISTRATION_TABLE_NOT_ACCESSIBLE.getMessage(), e);
+		}
+	}
+
+	private PageResponseDto<LostRidDto> applyPagination(List<LostRidDto> lostRidDtos, List<SortInfo> sort, Pagination pagination) {
+		PageResponseDto<LostRidDto> pageResponseDto = new PageResponseDto<>();
+		if (sort != null && !sort.isEmpty()) {
+			SortInfo sortInfo = sort.get(0);
+			Comparator<LostRidDto> comparator = Comparator.comparing(
+					dto -> getFieldValue(dto, sortInfo.getSortField()));
+			if ("desc".equalsIgnoreCase(sortInfo.getSortType())) {
+				comparator = comparator.reversed();
+			}
+			lostRidDtos.sort(comparator);
+		}
+
+		int totalRecord = lostRidDtos.size();
+		int pageStart = (pagination != null) ? pagination.getPageStart() : 0;
+		int pageFetch = (pagination != null) ? pagination.getPageFetch() : totalRecord;
+
+		int fromIndex = pageStart * pageFetch;
+		int toIndex = Math.min(fromIndex + pageFetch, totalRecord);
+
+		List<LostRidDto> pagedData = (fromIndex >= totalRecord)
+				? Collections.emptyList()
+				: lostRidDtos.subList(fromIndex, toIndex);
+
+		pageResponseDto.setData(pagedData);
+		pageResponseDto.setTotalRecord(totalRecord);
+		pageResponseDto.setFromRecord(totalRecord == 0 ? 0 : fromIndex + 1); // 1-based
+		pageResponseDto.setToRecord(toIndex);
+
+		return pageResponseDto;
+	}
+
+	private String getFieldValue(LostRidDto dto, String fieldName) {
+		try {
+			Field field = LostRidDto.class.getDeclaredField(fieldName);
+			field.setAccessible(true);
+			Object value = field.get(dto);
+			return value != null ? value.toString() : "";
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			return "";
 		}
 	}
 
@@ -824,7 +852,11 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 	}
 
 	private List<LostRidDto> entityToDtoMapper(List<SyncRegistrationEntity> syncRegistrationEntities) {
-		List<LostRidDto> lostRidDtos = new ArrayList<LostRidDto>();
+		List<LostRidDto> lostRidDtos = new ArrayList<>();
+		if (syncRegistrationEntities == null ||
+				syncRegistrationEntities.isEmpty()) {
+			return lostRidDtos;
+		}
 		syncRegistrationEntities.forEach(syncEntity -> {
 			LostRidDto lostRidDto = new LostRidDto();
 			lostRidDto.setRegistrationId(syncEntity.getRegistrationId());
@@ -835,7 +867,7 @@ public class SyncRegistrationServiceImpl implements SyncRegistrationService<Sync
 			}
 			lostRidDtos.add(lostRidDto);
 		});
-		return lostRidDtos.stream().distinct().collect(Collectors.toList());
+		return lostRidDtos.stream().distinct().toList();
 	}
 
 	private void getAdditionalInfo(String referenceId, byte[] optionalValues, Map<String, String> additionalInfo)  {

@@ -2,15 +2,9 @@ package io.mosip.registration.processor.status.service;
 
 import java.util.List;
 
+import io.mosip.registration.processor.status.dto.*;
 import org.springframework.stereotype.Service;
 
-import io.mosip.registration.processor.status.dto.LostRidDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusDto;
-import io.mosip.registration.processor.status.dto.RegistrationStatusSubRequestDto;
-import io.mosip.registration.processor.status.dto.RegistrationSyncRequestDTO;
-import io.mosip.registration.processor.status.dto.SyncRegistrationDto;
-import io.mosip.registration.processor.status.dto.SearchInfo;
-import io.mosip.registration.processor.status.dto.SyncResponseDto;
 import io.mosip.registration.processor.status.entity.SyncRegistrationEntity;
 
 /**
@@ -113,6 +107,6 @@ public interface SyncRegistrationService<T, U> {
 
 	public List<SyncRegistrationEntity> getByPacketIds(List<String> packetIdList);
 
-	public List<LostRidDto> searchLostRid(SearchInfo searchInfo);
+	public PageResponseDto<LostRidDto> searchLostRid(SearchInfo searchInfo);
 
 }
