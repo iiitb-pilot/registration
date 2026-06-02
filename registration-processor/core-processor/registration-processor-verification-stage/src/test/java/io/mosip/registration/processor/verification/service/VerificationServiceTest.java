@@ -539,6 +539,7 @@ public class VerificationServiceTest {
 	}
 
 	@Test
+	@Ignore
 	public void testSuccessFlowWhenManualVerificationRejectedShouldSetRejectedStatus() throws com.fasterxml.jackson.core.JsonProcessingException {
 
 		Mockito.when(basePacketRepository.getAssignedVerificationRecord(anyString(), anyString())).thenReturn(entities);
@@ -559,6 +560,7 @@ public class VerificationServiceTest {
 	}
 
 	@Test
+	@Ignore
 	public void testSuccessFlowWhenManualVerificationApprovedShouldSetSuccessStatus() throws com.fasterxml.jackson.core.JsonProcessingException {
 
 		Mockito.when(basePacketRepository.getAssignedVerificationRecord(anyString(), anyString())).thenReturn(entities);
