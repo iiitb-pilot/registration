@@ -12,6 +12,15 @@ public enum RegistrationType {
 	/** The new. */
 	NEW("new"),
 
+	/** The CRVS_NEW. */
+	CRVS_NEW("crvs_new"),
+
+	/** The CRVS_UPDATE. */
+	CRVS_UPDATE("crvs_update"),
+
+	/** The CRVS_DEATH. */
+	CRVS_DEATH("crvs_death"),
+
 	/** The update. */
 	UPDATE("update"),
 
