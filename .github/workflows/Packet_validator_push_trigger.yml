@@ -75,16 +75,16 @@ jobs:
           </settings>
           EOF
 
-      - name: Checkout and Build Kernel
+      - name: Checkout Kernel from Commons repo
         uses: actions/checkout@v4
         with:
-          repository: mosip/kernel
+          repository: mosip/commons
           ref: ${{ github.event.inputs.branch }}
-          path: kernel
+          path: commons
 
       - name: Build and Install Kernel Dependencies
         run: |
-          cd kernel
+          cd commons/kernel
           mvn -B clean install -s $GITHUB_WORKSPACE/settings.xml -DskipTests -Dgpg.skip=true
 
       - name: Build with Maven
