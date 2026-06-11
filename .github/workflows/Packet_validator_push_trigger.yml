@@ -43,7 +43,7 @@ jobs:
 
       - name: Setup settings file for ossrh server
         run: |
-          cat > $GITHUB_WORKSPACE/settings.xml << EOF
+          cat > $GITHUB_WORKSPACE/settings.xml << 'EOF'
           <settings>
             <servers>
               <server>
@@ -54,12 +54,34 @@ jobs:
             </servers>
             <profiles>
               <profile>
-                <id>ossrh</id>
-                <activation><activeByDefault>true</activeByDefault></activation>
+                <id>mosip-repos</id>
+                <activation>
+                  <activeByDefault>true</activeByDefault>
+                </activation>
                 <properties>
                   <gpg.executable>gpg2</gpg.executable>
                   <gpg.passphrase>${{secrets.gpg_secret}}</gpg.passphrase>
                 </properties>
+                <repositories>
+                  <repository>
+                    <id>mosip-snapshots</id>
+                    <url>https://repo.mosip.io/snapshots</url>
+                    <releases><enabled>false</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                  <repository>
+                    <id>mosip-releases</id>
+                    <url>https://repo.mosip.io/releases</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                  </repository>
+                  <repository>
+                    <id>ossrh-snapshots</id>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+                    <releases><enabled>false</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                </repositories>
               </profile>
             </profiles>
           </settings>
