@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch name to build from'
         required: true
-        default: 'develop'
+        default: '1.1.5.5-P6'
         type: string
       docker_tag:
         description: 'Docker tag (optional, defaults to branch name)'
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch }}   # your repo - use input branch
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
@@ -74,18 +74,6 @@ jobs:
             </profiles>
           </settings>
           EOF
-
-      - name: Checkout Kernel from Commons repo
-        uses: actions/checkout@v4
-        with:
-          repository: mosip/commons
-          ref: ${{ github.event.inputs.branch }}
-          path: commons
-
-      - name: Build and Install Kernel Dependencies
-        run: |
-          cd commons/kernel
-          mvn -B clean install -s $GITHUB_WORKSPACE/settings.xml -DskipTests -Dgpg.skip=true
 
       - name: Build with Maven
         run: |
