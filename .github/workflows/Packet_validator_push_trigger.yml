@@ -64,18 +64,6 @@ jobs:
                 </properties>
                 <repositories>
                   <repository>
-                    <id>mosip-snapshots</id>
-                    <url>https://repo.mosip.io/snapshots</url>
-                    <releases><enabled>false</enabled></releases>
-                    <snapshots><enabled>true</enabled></snapshots>
-                  </repository>
-                  <repository>
-                    <id>mosip-releases</id>
-                    <url>https://repo.mosip.io/releases</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                  </repository>
-                  <repository>
                     <id>ossrh-snapshots</id>
                     <url>https://oss.sonatype.org/content/repositories/snapshots</url>
                     <releases><enabled>false</enabled></releases>
@@ -86,6 +74,18 @@ jobs:
             </profiles>
           </settings>
           EOF
+
+      - name: Checkout and Build Kernel
+        uses: actions/checkout@v4
+        with:
+          repository: mosip/kernel
+          ref: ${{ github.event.inputs.branch }}
+          path: kernel
+
+      - name: Build and Install Kernel Dependencies
+        run: |
+          cd kernel
+          mvn -B clean install -s $GITHUB_WORKSPACE/settings.xml -DskipTests -Dgpg.skip=true
 
       - name: Build with Maven
         run: |
@@ -133,7 +133,6 @@ jobs:
           NAMESPACE="${{ secrets.dev_namespace_docker_hub }}"
           SERVICE_NAME="registration-processor-packet-validator-stage"
           
-          # Determine tag
           if [ -n "${{ github.event.inputs.docker_tag }}" ]; then
             VERSION="${{ github.event.inputs.docker_tag }}"
           else
@@ -141,7 +140,5 @@ jobs:
           fi
           
           IMAGE_ID=$(echo "$NAMESPACE/$SERVICE_NAME" | tr '[A-Z]' '[a-z]')
-          echo "Pushing: $IMAGE_ID:$VERSION"
-          
           docker tag $SERVICE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
