@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-maven-registration:
-    uses: iiitb-pilot/kattu/.github/workflows/maven-build.yml@master-java
+    uses: iiitb-pilot/kattu/.github/workflows/maven-build.yml@master
     with:
       SERVICE_LOCATION: ./registration-processor
       BUILD_ARTIFACT: registration
@@ -37,7 +37,7 @@ jobs:
 
       fail-fast: false
     name: ${{ matrix.SERVICE_NAME }}
-    uses: iiitb-pilot/kattu/.github/workflows/docker-build.yml@master-java
+    uses: iiitb-pilot/kattu/.github/workflows/docker-build.yml@master
     with:
       SERVICE_LOCATION: ${{ matrix.SERVICE_LOCATION }}
       SERVICE_NAME: ${{ matrix.SERVICE_NAME }}
