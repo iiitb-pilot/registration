@@ -30,4 +30,9 @@ public enum RegistrationType {
 	
 	/** The res reprint. */
 	RES_REPRINT;
+
+	/** The CRVS REGTYPE*/
+	CRVS_NEW,
+	CRVS_UPDATE,
+	CRVS_DEATH;
 }
