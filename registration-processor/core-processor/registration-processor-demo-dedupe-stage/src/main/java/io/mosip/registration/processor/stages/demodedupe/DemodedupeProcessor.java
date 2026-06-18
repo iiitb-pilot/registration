@@ -176,7 +176,10 @@ public class DemodedupeProcessor {
 
 		try {
 			// Persist Demographic packet Data if packet Registration type is NEW
-			if (registrationStatusDto.getRegistrationType().equals(RegistrationType.NEW.name())) {
+			if (registrationStatusDto.getRegistrationType().equals(RegistrationType.NEW.name())
+			
+				|| registrationStatusDto.getRegistrationType().equals(RegistrationType.CRVS_NEW.name())
+			) {
 
 				String packetStatus = abisHandlerUtil.getPacketStatus(registrationStatusDto);
 
@@ -228,7 +231,10 @@ public class DemodedupeProcessor {
 				}
 
 			} else if (registrationStatusDto.getRegistrationType().equals(RegistrationType.UPDATE.name())
-					|| registrationStatusDto.getRegistrationType().equals(RegistrationType.RES_UPDATE.name())) {
+					|| registrationStatusDto.getRegistrationType().equals(RegistrationType.RES_UPDATE.name())
+					|| registrationStatusDto.getRegistrationType().equals(RegistrationType.CRVS_UPDATE.name())
+					|| registrationStatusDto.getRegistrationType().equals(RegistrationType.CRVS_DEATH.name())
+			) {
 				IndividualDemographicDedupe demoDedupeData = new IndividualDemographicDedupe();
 
 
