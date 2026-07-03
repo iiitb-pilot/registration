@@ -350,17 +350,17 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 		if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.LOST.getValue()))
 			type = NotificationTemplateType.LOST_UIN;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue())
-				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_NEW.getValue())))
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_NEW.getValue()))
 			type = NotificationTemplateType.UIN_CREATED;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.UPDATE.getValue())
 		|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.RES_UPDATE.getValue())
-				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_UPDATE.getValue())))
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_UPDATE.getValue()))
 			type = NotificationTemplateType.UIN_UPDATE;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.ACTIVATED.getValue()))
 			type = NotificationTemplateType.UIN_UPDATE;
 		else if (registrationStatusDto.getRegistrationType()
 				.equalsIgnoreCase(SyncTypeDto.DEACTIVATED.getValue())
-				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_DEATH.getValue())))
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_DEATH.getValue()))
 			type = NotificationTemplateType.UIN_UPDATE;
 		return type;
 	}
