@@ -28,7 +28,16 @@ public enum SyncTypeDto {
 	RES_UPDATE("RES_UPDATE"),
 	
 	/** The res re-print. */
-	RES_REPRINT("RES_REPRINT");
+	RES_REPRINT("RES_REPRINT"),
+
+	/** The CRVS_NEW. */
+	CRVS_NEW("CRVS_NEW"),
+
+	/** The CRVS_UPDATE. */
+	CRVS_UPDATE("CRVS_UPDATE"),
+
+	/** The CRVS_DEATH. */
+	CRVS_DEATH("CRVS_DEATH");
 
 	/** The value. */
 	private String value;
