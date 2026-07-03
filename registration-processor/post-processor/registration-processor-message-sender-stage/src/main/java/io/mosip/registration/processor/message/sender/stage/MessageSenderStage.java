@@ -349,15 +349,18 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 			NotificationTemplateType type) {
 		if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.LOST.getValue()))
 			type = NotificationTemplateType.LOST_UIN;
-		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue()))
+		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue())
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_NEW.getValue())))
 			type = NotificationTemplateType.UIN_CREATED;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.UPDATE.getValue())
-		|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.RES_UPDATE.getValue()))
+		|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.RES_UPDATE.getValue())
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_UPDATE.getValue())))
 			type = NotificationTemplateType.UIN_UPDATE;
 		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.ACTIVATED.getValue()))
 			type = NotificationTemplateType.UIN_UPDATE;
 		else if (registrationStatusDto.getRegistrationType()
-				.equalsIgnoreCase(SyncTypeDto.DEACTIVATED.getValue()))
+				.equalsIgnoreCase(SyncTypeDto.DEACTIVATED.getValue())
+				|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_DEATH.getValue())))
 			type = NotificationTemplateType.UIN_UPDATE;
 		return type;
 	}
@@ -541,7 +544,8 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 			messageSenderDto.setSubject(uinGeneratedSubject);
 			break;
 		case UIN_UPDATE:
-			if (regType.equalsIgnoreCase(RegistrationType.NEW.name())) {
+			if (regType.equalsIgnoreCase(RegistrationType.NEW.name())
+			   || regType.equalsIgnoreCase(RegistrationType.CRVS_NEW.name())) {
 				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
 				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
 				messageSenderDto.setIdType(IdType.UIN);
@@ -551,13 +555,15 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_REAC_EMAIL);
 				messageSenderDto.setIdType(IdType.UIN);
 				messageSenderDto.setSubject(uinActivateSubject);
-			} else if (regType.equalsIgnoreCase(RegistrationType.DEACTIVATED.name())) {
+			} else if (regType.equalsIgnoreCase(RegistrationType.DEACTIVATED.name())
+					  || regType.equalsIgnoreCase(RegistrationType.CRVS_DEATH.name())) {
 				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_SMS);
 				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_EMAIL);
 				messageSenderDto.setIdType(IdType.UIN);
 				messageSenderDto.setSubject(uinDeactivateSubject);
 			} else if (regType.equalsIgnoreCase(RegistrationType.UPDATE.name())
-			|| regType.equalsIgnoreCase(RegistrationType.RES_UPDATE.name())) {
+			|| regType.equalsIgnoreCase(RegistrationType.RES_UPDATE.name())
+					  || regType.equalsIgnoreCase(RegistrationType.CRVS_UPDATE.name())) {
 				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
 				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
 				messageSenderDto.setIdType(IdType.UIN);
